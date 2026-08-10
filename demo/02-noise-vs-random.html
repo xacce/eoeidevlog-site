@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Шум — это рандом, брошенный реже</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #181b21;
+    --panel-2: #1d212a;
+    --line: #2a2f3a;
+    --text: #dde2ea;
+    --dim: #8b94a3;
+    --dim-2: #6d7684;
+    --accent: #7aa2f7;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .demo {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+    overflow-wrap: break-word;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 0.6rem;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 0.82rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+    margin: 0 0 0.7rem;
+  }
+
+  p { margin: 0 0 0.8rem; }
+  p.lead { color: var(--dim); }
+  p:last-child { margin-bottom: 0; }
+
+  .block {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.9rem;
+    margin-top: 1.1rem;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  label {
+    font-size: 0.78rem;
+    color: var(--dim);
+  }
+
+  input[type="text"] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.95rem;
+  }
+
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  button {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.5rem 0.8rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  button:hover { border-color: var(--accent); }
+  button:active { background: #232833; }
+
+  button.primary {
+    background: #23324d;
+    border-color: #35507d;
+    color: #cfdcf7;
+  }
+
+  .note {
+    font-size: 0.82rem;
+    color: var(--dim);
+    margin-top: 0.6rem;
+  }
+
+  /* ---- полоса ---- */
+
+  .strip {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 190px;
+    touch-action: none;
+    cursor: crosshair;
+  }
+
+  .tally {
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+
+  .tally b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.9rem;
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    color: var(--dim);
+  }
+
+  .keys span { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+  .swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    flex: none;
+  }
+
+  /* ---- строка арифметики ---- */
+
+  .sum {
+    margin-top: 0.8rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    min-height: 3.6em;
+  }
+
+  .sum b {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .sum .res {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .sum.idle {
+    border-left-color: var(--line);
+    color: var(--dim-2);
+    font-size: 0.88rem;
+  }
+
+  /* ---- ручка ---- */
+
+  .knob {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .knob .head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.2rem 0.8rem;
+    font-size: 0.78rem;
+    color: var(--dim);
+    margin-bottom: 0.35rem;
+  }
+
+  .knob .head b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 22px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  input[type="range"]:focus { outline: none; }
+  input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px #23324d; }
+  input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px #23324d; }
+
+  .ends {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    font-size: 0.74rem;
+    color: var(--dim-2);
+  }
+
+  /* ---- пара картинок ---- */
+
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    width: 100%;
+  }
+
+  .shot { min-width: 0; }
+
+  .frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    touch-action: none;
+  }
+
+  .frame canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+  }
+
+  .frame canvas.pic {
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    image-rendering: pixelated;
+  }
+
+  .frame canvas.over { pointer-events: none; }
+
+  .shot .cap {
+    margin-top: 0.4rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .shot .sub {
+    font-size: 0.78rem;
+    color: var(--dim);
+    overflow-wrap: anywhere;
+  }
+
+  .shot.right .cap { color: var(--accent); }
+
+  /* ---- тумблеры ---- */
+
+  .toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.5rem 0.7rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.88rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle:hover { border-color: var(--accent); }
+  .toggle.on { background: #23324d; border-color: #35507d; color: #cfdcf7; }
+
+  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+  .toggle .box {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border: 1px solid var(--dim-2);
+    border-radius: 3px;
+    background: var(--bg);
+  }
+
+  .toggle.on .box {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: inset 0 0 0 3px #23324d;
+  }
+
+  .toggle input:focus-visible + .box { box-shadow: 0 0 0 3px #23324d; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.8rem;
+    margin-top: 0.7rem;
+    font-size: 0.78rem;
+    color: var(--dim);
+  }
+
+  .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .legend.off { display: none; }
+  .legend .swatch { border: 1px solid #00000055; }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 1.6rem 0 0;
+  }
+
+  @media (max-width: 460px) {
+    .pair { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
+    .strip { height: 165px; }
+  }
+
+  @media (max-width: 380px) {
+    .demo { padding: 1.1rem 0.7rem 2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="demo">
+
+  <h1>Шум — это рандом, брошенный реже</h1>
+  <p class="lead">Мир не набросать честными случайными числами: выйдет телевизионный
+  снег. Шум берёт те же числа, но бросает их редко, а всё, что лежит между бросками,
+  вычисляет — чем ближе точка к броску, тем больше она на него похожа. Отсюда и
+  гладкость: большая часть картинки не случайна.</p>
+
+  <div class="block">
+    <h2>Сид</h2>
+    <div class="controls">
+      <div class="field">
+        <label for="seedInput">Одно число на весь стенд — любой текст или число</label>
+        <input type="text" id="seedInput" value="12345" spellcheck="false" autocomplete="off">
+      </div>
+      <button class="primary" id="reseedBtn">Другой сид</button>
+    </div>
+  </div>
+
+  <div class="block">
+    <h2>Одна полоса</h2>
+    <canvas class="strip" id="strip"></canvas>
+    <div class="tally" id="tally">—</div>
+    <div class="keys">
+      <span><i class="swatch" style="background:#4a6ea8"></i>тут бросили число</span>
+      <span><i class="swatch" style="background:#333b49"></i>тут посчитали между бросками</span>
+    </div>
+
+    <div class="sum" id="sum1d">—</div>
+
+    <div class="knob">
+      <div class="head">
+        <label for="knob">Как редко бросаем число</label>
+        <span><b id="rateOut">—</b></span>
+      </div>
+      <input type="range" id="knob" min="0" max="5" step="1" value="5">
+      <div class="ends"><span>в каждой точке</span><span>раз в 32 точки</span></div>
+    </div>
+
+    <p class="note">Переход у самих бросков нарочно замедлен, поэтому доля не равна
+    расстоянию: на трети пути точка забирает у соседа меньше трети. Без этого на
+    каждом броске был бы излом.</p>
+  </div>
+
+  <div class="block">
+    <h2>То же самое в две стороны</h2>
+    <div class="pair">
+      <div class="shot">
+        <div class="frame" id="frameLeft">
+          <canvas class="pic" id="cvLeft" width="256" height="256" aria-label="число брошено в каждой точке"></canvas>
+        </div>
+        <div class="cap">Бросок в каждой точке</div>
+        <div class="sub">считать нечего — это снег</div>
+      </div>
+      <div class="shot right">
+        <div class="frame" id="frameRight">
+          <canvas class="pic" id="cvRight" width="256" height="256" aria-label="редкие броски и посчитанное между ними"></canvas>
+          <canvas class="over" id="cvOver"></canvas>
+        </div>
+        <div class="cap" id="rightCap">Редкие броски</div>
+        <div class="sub" id="rightSub">—</div>
+      </div>
+    </div>
+
+    <div class="sum idle" id="sum2d">Наведите на картинку — покажу, из каких бросков сложилась точка.</div>
+
+    <div class="toggles">
+      <label class="toggle on" id="dotsLabel">
+        <input type="checkbox" id="dots" checked>
+        <span class="box" aria-hidden="true"></span>
+        <span>Показать точки бросков</span>
+      </label>
+      <label class="toggle on" id="reliefLabel">
+        <input type="checkbox" id="relief" checked>
+        <span class="box" aria-hidden="true"></span>
+        <span>Показать как рельеф</span>
+      </label>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <p class="note" id="foot">—</p>
+  </div>
+
+  <hr class="sep">
+
+<script>
+// ===== CORE START =====
+// Хеш строки в 32-битное число. xmur3.
+function xmur3(str) {
+  var h = 1779033703 ^ str.length;
+  for (var i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  };
+}
+
+// Сид — из текста в поле ввода.
+function seedFromText(text) {
+  if (/^\d+$/.test(text)) return (Number(text) % 4294967296) >>> 0;
+  return xmur3(text)();
+}
+
+// Бросок в точке: целочисленный хеш от места и сида. Никакого состояния —
+// одно и то же место при одном сиде всегда даёт одно и то же число.
+function hashU32(x, y, seed) {
+  var h = (seed ^ 0x9E3779B9) | 0;
+  h = Math.imul(h ^ x, 0x85EBCA6B);
+  h = (h << 13) | (h >>> 19);
+  h = Math.imul(h ^ y, 0xC2B2AE35);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x27D4EB2F);
+  h ^= h >>> 15;
+  return h >>> 0;
+}
+
+var SALT_1D = 0x51ED270B;
+var SALT_2D = 0x2545F491;
+
+// Значение броска зависит только от места и сида, но не от того, как редко
+// бросают. Поэтому редкий бросок — это буквально часть тех же чисел, взятая
+// через одно, а не другой набор.
+function throw1D(seed, p) {
+  return hashU32(p, 0, (seed ^ SALT_1D) >>> 0) / 4294967296;
+}
+
+function throw2D(seed, x, y) {
+  return hashU32(x, y, (seed ^ SALT_2D) >>> 0) / 4294967296;
+}
+
+// Переход у бросков замедлен: не прямая, а S-образная кривая. Иначе на каждом
+// броске виден излом.
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+// Как редко бросаем: ручка ходит по этим шести значениям.
+var RATES = [1, 2, 4, 8, 16, 32];
+
+// Полоса. Разбор одной точки: между какими бросками она лежит, какую долю
+// у кого взяла и что из этого вышло.
+function cell1D(seed, rate, i) {
+  var left = Math.floor(i / rate) * rate;
+  var right = left + rate;
+  var frac = (i - left) / rate;
+  var a = throw1D(seed, left);
+  var b = throw1D(seed, right);
+  var w = smoothstep(frac);
+  return {
+    thrown: frac === 0,
+    leftAt: left, rightAt: right,
+    left: a, right: b,
+    frac: frac, share: w,
+    value: a + (b - a) * w
+  };
+}
+
+function strip1D(seed, rate, n) {
+  var out = new Float64Array(n);
+  for (var i = 0; i < n; i++) {
+    var left = Math.floor(i / rate) * rate;
+    var a = throw1D(seed, left);
+    var b = throw1D(seed, left + rate);
+    var w = smoothstep((i - left) / rate);
+    out[i] = a + (b - a) * w;
+  }
+  return out;
+}
+
+// Картинка. Тот же разбор, только бросков вокруг точки четыре.
+function cell2D(seed, rate, x, y) {
+  var x0 = Math.floor(x / rate) * rate, y0 = Math.floor(y / rate) * rate;
+  var x1 = x0 + rate, y1 = y0 + rate;
+  var fx = (x - x0) / rate, fy = (y - y0) / rate;
+  var wx = smoothstep(fx), wy = smoothstep(fy);
+  var v00 = throw2D(seed, x0, y0), v10 = throw2D(seed, x1, y0);
+  var v01 = throw2D(seed, x0, y1), v11 = throw2D(seed, x1, y1);
+  var top = v00 + (v10 - v00) * wx;
+  var bot = v01 + (v11 - v01) * wx;
+  return {
+    thrown: fx === 0 && fy === 0,
+    x0: x0, y0: y0, x1: x1, y1: y1,
+    v00: v00, v10: v10, v01: v01, v11: v11,
+    w00: (1 - wx) * (1 - wy), w10: wx * (1 - wy),
+    w01: (1 - wx) * wy, w11: wx * wy,
+    value: top + (bot - top) * wy
+  };
+}
+
+function field2D(size, seed, rate) {
+  var n = Math.ceil(size / rate) + 2;
+  var nodes = new Float64Array(n * n);
+  for (var gy = 0; gy < n; gy++) {
+    for (var gx = 0; gx < n; gx++) nodes[gy * n + gx] = throw2D(seed, gx * rate, gy * rate);
+  }
+  var ix = new Int32Array(size), wxs = new Float64Array(size);
+  for (var x = 0; x < size; x++) {
+    var x0 = Math.floor(x / rate);
+    ix[x] = x0;
+    wxs[x] = smoothstep((x - x0 * rate) / rate);
+  }
+  var out = new Float64Array(size * size);
+  for (var y = 0; y < size; y++) {
+    var y0 = Math.floor(y / rate);
+    var wy = smoothstep((y - y0 * rate) / rate);
+    var r0 = y0 * n, r1 = (y0 + 1) * n;
+    var row = y * size;
+    for (x = 0; x < size; x++) {
+      var gx0 = ix[x], wx = wxs[x];
+      var v00 = nodes[r0 + gx0], v10 = nodes[r0 + gx0 + 1];
+      var v01 = nodes[r1 + gx0], v11 = nodes[r1 + gx0 + 1];
+      var top = v00 + (v10 - v00) * wx;
+      var bot = v01 + (v11 - v01) * wx;
+      out[row + x] = top + (bot - top) * wy;
+    }
+  }
+  return out;
+}
+
+// Чем реже броски, тем сильнее посчитанное жмётся к середине: краёв достигают
+// только сами броски. Поэтому раскраска берёт не само значение, а его место
+// в ряду остальных — иначе редкий бросок красит весь мир одним цветом.
+// Само поле при этом не трогается: разбор точки говорит про него.
+var EQ_BINS = 4096;
+
+function shades(field) {
+  var i, n = field.length;
+  var out = new Float64Array(n);
+  var min = Infinity, max = -Infinity;
+  for (i = 0; i < n; i++) { var v = field[i]; if (v < min) min = v; if (v > max) max = v; }
+  var span = max - min;
+  if (span < 1e-9) { for (i = 0; i < n; i++) out[i] = 0.5; return out; }
+  var scale = (EQ_BINS - 1) / span;
+  var hist = new Int32Array(EQ_BINS);
+  var idx = new Int32Array(n);
+  for (i = 0; i < n; i++) { var b = ((field[i] - min) * scale) | 0; idx[i] = b; hist[b]++; }
+  var lut = new Float64Array(EQ_BINS);
+  var cum = 0;
+  for (i = 0; i < EQ_BINS; i++) { lut[i] = (cum + hist[i] * 0.5) / n; cum += hist[i]; }
+  for (i = 0; i < n; i++) out[i] = lut[idx[i]];
+  return out;
+}
+
+var BANDS = [
+  { max: 0.30, name: 'глубина', rgb: [22, 44, 74] },
+  { max: 0.44, name: 'вода', rgb: [46, 98, 143] },
+  { max: 0.50, name: 'песок', rgb: [205, 183, 122] },
+  { max: 0.88, name: 'трава', rgb: [80, 131, 74] },
+  { max: 2.00, name: 'камень', rgb: [139, 132, 120] }
+];
+
+function bandOf(v) {
+  for (var i = 0; i < BANDS.length; i++) if (v < BANDS[i].max) return i;
+  return BANDS.length - 1;
+}
+// ===== CORE END =====
+
+(function () {
+  var SIZE = 256;
+  var CELLS = 65;          // столбиков на полосе: 64 шага между краями
+  var STRIP_H = 190;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var seedInput = $('seedInput');
+  var knob = $('knob');
+  var dots = $('dots');
+  var dotsLabel = $('dotsLabel');
+  var relief = $('relief');
+  var reliefLabel = $('reliefLabel');
+  var rateOut = $('rateOut');
+  var tallyEl = $('tally');
+  var sum1d = $('sum1d');
+  var sum2d = $('sum2d');
+  var rightSub = $('rightSub');
+  var legendEl = $('legend');
+  var footEl = $('foot');
+
+  var stripEl = $('strip');
+  var sctx = stripEl.getContext('2d');
+  var ctxL = $('cvLeft').getContext('2d');
+  var ctxR = $('cvRight').getContext('2d');
+  var over = $('cvOver');
+  var octx = over.getContext('2d');
+  var imgL = ctxL.createImageData(SIZE, SIZE);
+  var imgR = ctxR.createImageData(SIZE, SIZE);
+
+  var seed = 0;
+  var rate = RATES[Number(knob.value)];
+  var bars = null;
+  var fieldL = null, shadeL = null;
+  var fieldR = null, shadeR = null;
+  var hoverI = -1;
+  var hover2 = null;
+  var pending = 0;
+
+  function num(v) { return v.toFixed(2); }
+  function pct(v) { return Math.round(v * 100) + '%'; }
+
+  function plural(n, one, few, many) {
+    var n10 = n % 10, n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return one;
+    if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return few;
+    return many;
+  }
+
+  // ---------- полоса ----------
+
+  function sizeStrip() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = stripEl.clientWidth || 300;
+    var h = stripEl.clientHeight || STRIP_H;
+    stripEl.width = Math.round(w * dpr);
+    stripEl.height = Math.round(h * dpr);
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function geom() {
+    var w = stripEl.clientWidth || 300;
+    var h = stripEl.clientHeight || STRIP_H;
+    var pad = 12;
+    var top = 26, bottom = 14;
+    var slot = (w - pad * 2) / (CELLS - 1);
+    return { w: w, h: h, pad: pad, top: top, base: h - bottom, slot: slot };
+  }
+
+  function barX(g, i) { return g.pad + i * g.slot; }
+
+  function drawStrip() {
+    var g = geom();
+    sctx.clearRect(0, 0, g.w, g.h);
+
+    var bw = Math.max(2, g.slot * 0.62);
+    var plot = g.base - g.top;
+    var i, x, y;
+
+    // столбики
+    for (i = 0; i < CELLS; i++) {
+      var thrown = (i % rate) === 0;
+      x = barX(g, i);
+      y = g.base - bars[i] * plot;
+      sctx.fillStyle = (i === hoverI) ? '#8fb3fb' : (thrown ? '#4a6ea8' : '#333b49');
+      sctx.fillRect(x - bw / 2, y, bw, g.base - y);
+    }
+
+    // линия основания
+    sctx.strokeStyle = '#2a2f3a';
+    sctx.lineWidth = 1;
+    sctx.beginPath();
+    sctx.moveTo(0, g.base + 0.5);
+    sctx.lineTo(g.w, g.base + 0.5);
+    sctx.stroke();
+
+    // кривая по вершинам столбиков
+    sctx.strokeStyle = '#dde2ea';
+    sctx.lineWidth = 1.6;
+    sctx.lineJoin = 'round';
+    sctx.beginPath();
+    for (i = 0; i < CELLS; i++) {
+      x = barX(g, i);
+      y = g.base - bars[i] * plot;
+      if (i === 0) sctx.moveTo(x, y); else sctx.lineTo(x, y);
+    }
+    sctx.stroke();
+
+    // наведённая точка: вертикаль до её вершины и подсветка двух бросков,
+    // из которых она собрана
+    if (hoverI >= 0) {
+      var c = cell1D(seed, rate, hoverI);
+      var hx = barX(g, hoverI);
+      var hy = g.base - bars[hoverI] * plot;
+      sctx.strokeStyle = 'rgba(143,179,251,0.55)';
+      sctx.lineWidth = 1;
+      sctx.beginPath();
+      sctx.moveTo(hx + 0.5, hy);
+      sctx.lineTo(hx + 0.5, g.base);
+      sctx.stroke();
+      sctx.fillStyle = '#8fb3fb';
+      sctx.beginPath();
+      sctx.arc(hx, hy, 3, 0, Math.PI * 2);
+      sctx.fill();
+
+      sctx.strokeStyle = '#f2f5fa';
+      sctx.lineWidth = 1.6;
+      [c.leftAt, c.rightAt].forEach(function (p) {
+        if (p > CELLS - 1) p = CELLS - 1;
+        var px = barX(g, p);
+        var py = g.base - throw1D(seed, p) * plot;
+        sctx.beginPath();
+        sctx.arc(px, py, 7, 0, Math.PI * 2);
+        sctx.stroke();
+      });
+    }
+
+    // жирные точки в местах бросков
+    var r = Math.max(1.8, Math.min(4, g.slot * 0.34));
+    sctx.strokeStyle = '#111318';
+    sctx.lineWidth = 1.4;
+    for (i = 0; i < CELLS; i += rate) {
+      x = barX(g, i);
+      y = g.base - bars[i] * plot;
+      sctx.fillStyle = '#7aa2f7';
+      sctx.beginPath();
+      sctx.arc(x, y, r, 0, Math.PI * 2);
+      sctx.fill();
+      sctx.stroke();
+    }
+
+    // подписи бросков, если между ними хватает места
+    if (g.slot * rate >= 34) {
+      sctx.fillStyle = '#dde2ea';
+      sctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+      sctx.textAlign = 'center';
+      sctx.textBaseline = 'bottom';
+      for (i = 0; i < CELLS; i += rate) {
+        x = barX(g, i);
+        y = g.base - bars[i] * plot - r - 4;
+        if (y < 10) y = 10;
+        sctx.fillText(num(bars[i]), Math.min(g.w - 14, Math.max(14, x)), y);
+      }
+    }
+  }
+
+  function tally() {
+    var thrown = 0;
+    for (var i = 0; i < CELLS; i += rate) thrown++;
+    var computed = CELLS - thrown;
+    if (computed === 0) {
+      tallyEl.innerHTML = 'Бросили все <b>' + thrown + '</b> чисел — считать нечего. ' +
+        'Это и есть чистый рандом.';
+    } else {
+      tallyEl.innerHTML = 'Бросили <b>' + thrown + '</b> ' + plural(thrown, 'число', 'числа', 'чисел') +
+        ', остальные <b>' + computed + '</b> ' + plural(computed, 'точку', 'точки', 'точек') +
+        ' посчитали между ними.';
+    }
+  }
+
+  function show1D(i) {
+    var c = cell1D(seed, rate, i);
+    if (c.thrown) {
+      sum1d.className = 'sum';
+      sum1d.innerHTML = 'Точка <b>' + i + '</b>: здесь число брошено — <span class="res">' +
+        num(c.value) + '</span>. Считать нечего.';
+      return;
+    }
+    var right = Math.round(c.share * 100);
+    var left = 100 - right;
+    sum1d.className = 'sum';
+    sum1d.innerHTML = 'Точка <b>' + i + '</b> стоит на <b>' + pct(c.frac) +
+      '</b> пути от левого броска к правому: слева бросок <b>' + num(c.left) +
+      '</b>, справа <b>' + num(c.right) + '</b>, от левого берём <b>' + left +
+      '%</b>, от правого <b>' + right + '%</b> → <span class="res">' + num(c.value) + '</span>';
+  }
+
+  function stripIndex(ev) {
+    var g = geom();
+    var r = stripEl.getBoundingClientRect();
+    var i = Math.round((ev.clientX - r.left - g.pad) / g.slot);
+    return Math.max(0, Math.min(CELLS - 1, i));
+  }
+
+  function onStrip(ev) {
+    var i = stripIndex(ev);
+    if (i === hoverI) return;
+    hoverI = i;
+    drawStrip();
+    show1D(i);
+  }
+
+  stripEl.addEventListener('pointermove', onStrip);
+  stripEl.addEventListener('pointerdown', onStrip);
+
+  // ---------- картинки ----------
+
+  function paint(ctx, img, shade) {
+    var d = img.data;
+    var terrain = relief.checked;
+    for (var i = 0, p = 0; i < shade.length; i++, p += 4) {
+      var v = shade[i];
+      if (terrain) {
+        var c = BANDS[bandOf(v)].rgb;
+        d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2];
+      } else {
+        var g = (v * 255) | 0;
+        d[p] = g; d[p + 1] = g; d[p + 2] = g;
+      }
+      d[p + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function sizeOver() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = over.clientWidth || SIZE, h = over.clientHeight || SIZE;
+    over.width = Math.round(w * dpr);
+    over.height = Math.round(h * dpr);
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawOver() {
+    var w = over.clientWidth || SIZE, h = over.clientHeight || SIZE;
+    var k = w / SIZE;
+    octx.clearRect(0, 0, w, h);
+
+    if (dots.checked && rate >= 16) {
+      var gap = rate * k;
+      var r = Math.max(1.2, Math.min(2.6, gap * 0.13));
+      octx.fillStyle = 'rgba(248,250,255,0.92)';
+      octx.strokeStyle = 'rgba(10,12,16,0.8)';
+      octx.lineWidth = 1;
+      for (var gy = 0; gy * rate < SIZE + rate; gy++) {
+        for (var gx = 0; gx * rate < SIZE + rate; gx++) {
+          var x = gx * gap, y = gy * gap;
+          if (x > w + 2 || y > h + 2) continue;
+          octx.beginPath();
+          octx.arc(x, y, r, 0, Math.PI * 2);
+          octx.fill();
+          octx.stroke();
+        }
+      }
+    }
+
+    if (hover2) {
+      var c = hover2;
+      octx.strokeStyle = '#f2f5fa';
+      octx.lineWidth = 1.6;
+      [[c.x0, c.y0], [c.x1, c.y0], [c.x0, c.y1], [c.x1, c.y1]].forEach(function (p) {
+        octx.beginPath();
+        octx.arc(p[0] * k, p[1] * k, 6, 0, Math.PI * 2);
+        octx.stroke();
+      });
+      octx.fillStyle = '#7aa2f7';
+      octx.strokeStyle = '#111318';
+      octx.lineWidth = 1.4;
+      octx.beginPath();
+      octx.arc((c.px + 0.5) * k, (c.py + 0.5) * k, 3.4, 0, Math.PI * 2);
+      octx.fill();
+      octx.stroke();
+    }
+  }
+
+  function pixelAt(el, ev) {
+    var r = el.getBoundingClientRect();
+    var x = Math.floor((ev.clientX - r.left) / r.width * SIZE);
+    var y = Math.floor((ev.clientY - r.top) / r.height * SIZE);
+    return [Math.max(0, Math.min(SIZE - 1, x)), Math.max(0, Math.min(SIZE - 1, y))];
+  }
+
+  function show2D(ev) {
+    var p = pixelAt($('frameRight'), ev);
+    var c = cell2D(seed, rate, p[0], p[1]);
+    c.px = p[0]; c.py = p[1];
+    hover2 = c;
+    drawOver();
+    if (c.thrown) {
+      sum2d.className = 'sum';
+      sum2d.innerHTML = 'Здесь как раз бросок — <span class="res">' + num(c.value) +
+        '</span>. Ничего не считали.';
+      return;
+    }
+    var a = Math.round(c.w00 * 100), b = Math.round(c.w10 * 100), d = Math.round(c.w01 * 100);
+    var e = 100 - a - b - d;
+    sum2d.className = 'sum';
+    sum2d.innerHTML = 'Вокруг точки четыре броска: сверху <b>' + num(c.v00) + '</b> и <b>' +
+      num(c.v10) + '</b>, снизу <b>' + num(c.v01) + '</b> и <b>' + num(c.v11) +
+      '</b>. К одним точка ближе, чем к другим, и берёт от них — в том же порядке — <b>' +
+      a + '%</b>, <b>' + b + '%</b>, <b>' + d + '%</b> и <b>' + e +
+      '%</b> → <span class="res">' + num(c.value) + '</span>';
+  }
+
+  function showLeft(ev) {
+    var p = pixelAt($('frameLeft'), ev);
+    sum2d.className = 'sum';
+    sum2d.innerHTML = 'Слева бросок в каждой точке. В этой брошено <span class="res">' +
+      num(fieldL[p[1] * SIZE + p[0]]) + '</span>, и соседняя точка про неё ничего не знает.';
+  }
+
+  $('frameRight').addEventListener('pointermove', show2D);
+  $('frameRight').addEventListener('pointerdown', show2D);
+  $('frameLeft').addEventListener('pointermove', showLeft);
+  $('frameLeft').addEventListener('pointerdown', showLeft);
+
+  // ---------- сборка ----------
+
+  function renderRight() {
+    fieldR = field2D(SIZE, seed, rate);
+    shadeR = shades(fieldR);
+    paint(ctxR, imgR, shadeR);
+    hover2 = null;
+    drawOver();
+    $('rightCap').textContent = rate === 1 ? 'Тоже в каждой точке' : 'Редкие броски';
+    rightSub.textContent = rate === 1
+      ? 'та же картинка, что слева'
+      : 'бросок раз в ' + rate + ' ' + plural(rate, 'точку', 'точки', 'точек');
+  }
+
+  function renderLeft() {
+    fieldL = field2D(SIZE, seed, 1);
+    shadeL = shades(fieldL);
+    paint(ctxL, imgL, shadeL);
+  }
+
+  function renderBars() {
+    bars = strip1D(seed, rate, CELLS);
+    if (hoverI < 0) hoverI = Math.min(CELLS - 1, Math.round(rate * 0.3));
+    drawStrip();
+    show1D(hoverI);
+    tally();
+  }
+
+  function renderRate() {
+    rateOut.textContent = rate === 1
+      ? 'в каждой точке'
+      : 'раз в ' + rate + ' ' + plural(rate, 'точку', 'точки', 'точек');
+  }
+
+  function renderLegend() {
+    if (!relief.checked) { legendEl.className = 'legend off'; return; }
+    legendEl.className = 'legend';
+    var html = '';
+    for (var i = 0; i < BANDS.length; i++) {
+      var c = BANDS[i].rgb;
+      html += '<span><i class="swatch" style="background:rgb(' + c[0] + ',' + c[1] + ',' + c[2] +
+        ')"></i>' + BANDS[i].name + '</span>';
+    }
+    legendEl.innerHTML = html;
+  }
+
+  function renderFoot() {
+    var tail = (dots.checked && rate < 16)
+      ? ' Точки бросков сейчас не нарисованы: их слишком много, они сливаются в заливку.'
+      : '';
+    var body;
+    if (rate === 1) {
+      body = 'Обе картинки сейчас одинаковые: справа тоже бросили в каждой точке, и считать было нечего. ' +
+        'Сдвиньте ручку — справа броски станут редкими, а всё между ними посчитанным.';
+    } else if (relief.checked) {
+      body = 'Воды, песка, травы и камня на обеих картинках поровну — разложены по-разному. ' +
+        'Слева бросали в каждой точке, и берега нет. Справа броски редкие, а всё между ними посчитано, ' +
+        'и те же доли собрались в материк.';
+    } else {
+      body = 'Светлое выше, тёмное ниже. Слева число брошено в каждой точке. ' +
+        'Справа броски редкие, а промежутки посчитаны между ними.';
+    }
+    footEl.textContent = body + tail;
+  }
+
+  function reseed(text) {
+    seedInput.value = text;
+    seed = seedFromText(text);
+    renderLeft();
+    renderRight();
+    renderBars();
+  }
+
+  function applyRate() {
+    rate = RATES[Number(knob.value)];
+    hoverI = Math.min(CELLS - 1, Math.round(rate * 0.3));
+    renderRate();
+    renderBars();
+    renderRight();
+    renderFoot();
+  }
+
+  function scheduleRate() {
+    if (pending) return;
+    pending = requestAnimationFrame(function () { pending = 0; applyRate(); });
+  }
+
+  knob.addEventListener('input', scheduleRate);
+
+  dots.addEventListener('change', function () {
+    dotsLabel.className = dots.checked ? 'toggle on' : 'toggle';
+    drawOver();
+    renderFoot();
+  });
+
+  relief.addEventListener('change', function () {
+    reliefLabel.className = relief.checked ? 'toggle on' : 'toggle';
+    paint(ctxL, imgL, shadeL);
+    paint(ctxR, imgR, shadeR);
+    renderLegend();
+    renderFoot();
+  });
+
+  $('reseedBtn').addEventListener('click', function () {
+    reseed(String(Math.floor(Math.random() * 4294967296)));
+  });
+
+  seedInput.addEventListener('change', function () {
+    var text = seedInput.value;
+    if (text.length === 0) text = '0';
+    reseed(text);
+  });
+
+  seedInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') seedInput.blur();
+  });
+
+  window.addEventListener('resize', function () {
+    sizeStrip();
+    sizeOver();
+    drawStrip();
+    drawOver();
+  });
+
+  sizeStrip();
+  sizeOver();
+  renderRate();
+  renderLegend();
+  renderFoot();
+  reseed(seedInput.value);
+})();
+</script>
+</div>
+</body>
+</html>
