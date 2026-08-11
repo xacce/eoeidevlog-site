@@ -132,40 +132,6 @@
     margin-top: 0.6rem;
   }
 
-  /* ---- полоса ---- */
-
-  .strip {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    height: 190px;
-    touch-action: none;
-    cursor: crosshair;
-  }
-
-  .tally {
-    margin-top: 0.35rem;
-    font-size: 0.85rem;
-    color: var(--dim);
-  }
-
-  .tally b {
-    font-family: var(--mono);
-    font-weight: 500;
-    color: var(--text);
-  }
-
-  .keys {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem 0.9rem;
-    margin-top: 0.35rem;
-    font-size: 0.78rem;
-    color: var(--dim);
-  }
-
-  .keys span { display: inline-flex; align-items: center; gap: 0.35rem; }
-
   .swatch {
     width: 9px;
     height: 9px;
@@ -208,9 +174,9 @@
   /* ---- ручка ---- */
 
   .knob {
-    margin-top: 1rem;
-    padding-top: 0.9rem;
-    border-top: 1px solid var(--line);
+    margin-bottom: 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--line);
   }
 
   .knob .head {
@@ -401,7 +367,6 @@
 
   @media (max-width: 460px) {
     .pair { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
-    .strip { height: 165px; }
   }
 
   @media (max-width: 380px) {
@@ -430,15 +395,7 @@
   </div>
 
   <div class="block">
-    <h2>Одна полоса</h2>
-    <canvas class="strip" id="strip"></canvas>
-    <div class="tally" id="tally">—</div>
-    <div class="keys">
-      <span><i class="swatch" style="background:#4a6ea8"></i>тут бросили число</span>
-      <span><i class="swatch" style="background:#333b49"></i>тут посчитали между бросками</span>
-    </div>
-
-    <div class="sum" id="sum1d">—</div>
+    <h2>Броски и посчитанное между ними</h2>
 
     <div class="knob">
       <div class="head">
@@ -449,13 +406,6 @@
       <div class="ends"><span>в каждой точке</span><span>раз в 32 точки</span></div>
     </div>
 
-    <p class="note">Переход у самих бросков нарочно замедлен, поэтому доля не равна
-    расстоянию: на трети пути точка забирает у соседа меньше трети. Без этого на
-    каждом броске был бы излом.</p>
-  </div>
-
-  <div class="block">
-    <h2>То же самое в две стороны</h2>
     <div class="pair">
       <div class="shot">
         <div class="frame" id="frameLeft">
@@ -531,16 +481,11 @@ function hashU32(x, y, seed) {
   return h >>> 0;
 }
 
-var SALT_1D = 0x51ED270B;
 var SALT_2D = 0x2545F491;
 
 // Значение броска зависит только от места и сида, но не от того, как редко
 // бросают. Поэтому редкий бросок — это буквально часть тех же чисел, взятая
 // через одно, а не другой набор.
-function throw1D(seed, p) {
-  return hashU32(p, 0, (seed ^ SALT_1D) >>> 0) / 4294967296;
-}
-
 function throw2D(seed, x, y) {
   return hashU32(x, y, (seed ^ SALT_2D) >>> 0) / 4294967296;
 }
@@ -552,37 +497,8 @@ function smoothstep(t) { return t * t * (3 - 2 * t); }
 // Как редко бросаем: ручка ходит по этим шести значениям.
 var RATES = [1, 2, 4, 8, 16, 32];
 
-// Полоса. Разбор одной точки: между какими бросками она лежит, какую долю
+// Разбор одной точки: между какими четырьмя бросками она лежит, какую долю
 // у кого взяла и что из этого вышло.
-function cell1D(seed, rate, i) {
-  var left = Math.floor(i / rate) * rate;
-  var right = left + rate;
-  var frac = (i - left) / rate;
-  var a = throw1D(seed, left);
-  var b = throw1D(seed, right);
-  var w = smoothstep(frac);
-  return {
-    thrown: frac === 0,
-    leftAt: left, rightAt: right,
-    left: a, right: b,
-    frac: frac, share: w,
-    value: a + (b - a) * w
-  };
-}
-
-function strip1D(seed, rate, n) {
-  var out = new Float64Array(n);
-  for (var i = 0; i < n; i++) {
-    var left = Math.floor(i / rate) * rate;
-    var a = throw1D(seed, left);
-    var b = throw1D(seed, left + rate);
-    var w = smoothstep((i - left) / rate);
-    out[i] = a + (b - a) * w;
-  }
-  return out;
-}
-
-// Картинка. Тот же разбор, только бросков вокруг точки четыре.
 function cell2D(seed, rate, x, y) {
   var x0 = Math.floor(x / rate) * rate, y0 = Math.floor(y / rate) * rate;
   var x1 = x0 + rate, y1 = y0 + rate;
@@ -672,8 +588,6 @@ function bandOf(v) {
 
 (function () {
   var SIZE = 256;
-  var CELLS = 65;          // столбиков на полосе: 64 шага между краями
-  var STRIP_H = 190;
 
   var $ = function (id) { return document.getElementById(id); };
   var seedInput = $('seedInput');
@@ -683,15 +597,11 @@ function bandOf(v) {
   var relief = $('relief');
   var reliefLabel = $('reliefLabel');
   var rateOut = $('rateOut');
-  var tallyEl = $('tally');
-  var sum1d = $('sum1d');
   var sum2d = $('sum2d');
   var rightSub = $('rightSub');
   var legendEl = $('legend');
   var footEl = $('foot');
 
-  var stripEl = $('strip');
-  var sctx = stripEl.getContext('2d');
   var ctxL = $('cvLeft').getContext('2d');
   var ctxR = $('cvRight').getContext('2d');
   var over = $('cvOver');
@@ -701,15 +611,12 @@ function bandOf(v) {
 
   var seed = 0;
   var rate = RATES[Number(knob.value)];
-  var bars = null;
   var fieldL = null, shadeL = null;
   var fieldR = null, shadeR = null;
-  var hoverI = -1;
   var hover2 = null;
   var pending = 0;
 
   function num(v) { return v.toFixed(2); }
-  function pct(v) { return Math.round(v * 100) + '%'; }
 
   function plural(n, one, few, many) {
     var n10 = n % 10, n100 = n % 100;
@@ -717,172 +624,6 @@ function bandOf(v) {
     if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return few;
     return many;
   }
-
-  // ---------- полоса ----------
-
-  function sizeStrip() {
-    var dpr = window.devicePixelRatio || 1;
-    var w = stripEl.clientWidth || 300;
-    var h = stripEl.clientHeight || STRIP_H;
-    stripEl.width = Math.round(w * dpr);
-    stripEl.height = Math.round(h * dpr);
-    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function geom() {
-    var w = stripEl.clientWidth || 300;
-    var h = stripEl.clientHeight || STRIP_H;
-    var pad = 12;
-    var top = 26, bottom = 14;
-    var slot = (w - pad * 2) / (CELLS - 1);
-    return { w: w, h: h, pad: pad, top: top, base: h - bottom, slot: slot };
-  }
-
-  function barX(g, i) { return g.pad + i * g.slot; }
-
-  function drawStrip() {
-    var g = geom();
-    sctx.clearRect(0, 0, g.w, g.h);
-
-    var bw = Math.max(2, g.slot * 0.62);
-    var plot = g.base - g.top;
-    var i, x, y;
-
-    // столбики
-    for (i = 0; i < CELLS; i++) {
-      var thrown = (i % rate) === 0;
-      x = barX(g, i);
-      y = g.base - bars[i] * plot;
-      sctx.fillStyle = (i === hoverI) ? '#8fb3fb' : (thrown ? '#4a6ea8' : '#333b49');
-      sctx.fillRect(x - bw / 2, y, bw, g.base - y);
-    }
-
-    // линия основания
-    sctx.strokeStyle = '#2a2f3a';
-    sctx.lineWidth = 1;
-    sctx.beginPath();
-    sctx.moveTo(0, g.base + 0.5);
-    sctx.lineTo(g.w, g.base + 0.5);
-    sctx.stroke();
-
-    // кривая по вершинам столбиков
-    sctx.strokeStyle = '#dde2ea';
-    sctx.lineWidth = 1.6;
-    sctx.lineJoin = 'round';
-    sctx.beginPath();
-    for (i = 0; i < CELLS; i++) {
-      x = barX(g, i);
-      y = g.base - bars[i] * plot;
-      if (i === 0) sctx.moveTo(x, y); else sctx.lineTo(x, y);
-    }
-    sctx.stroke();
-
-    // наведённая точка: вертикаль до её вершины и подсветка двух бросков,
-    // из которых она собрана
-    if (hoverI >= 0) {
-      var c = cell1D(seed, rate, hoverI);
-      var hx = barX(g, hoverI);
-      var hy = g.base - bars[hoverI] * plot;
-      sctx.strokeStyle = 'rgba(143,179,251,0.55)';
-      sctx.lineWidth = 1;
-      sctx.beginPath();
-      sctx.moveTo(hx + 0.5, hy);
-      sctx.lineTo(hx + 0.5, g.base);
-      sctx.stroke();
-      sctx.fillStyle = '#8fb3fb';
-      sctx.beginPath();
-      sctx.arc(hx, hy, 3, 0, Math.PI * 2);
-      sctx.fill();
-
-      sctx.strokeStyle = '#f2f5fa';
-      sctx.lineWidth = 1.6;
-      [c.leftAt, c.rightAt].forEach(function (p) {
-        if (p > CELLS - 1) p = CELLS - 1;
-        var px = barX(g, p);
-        var py = g.base - throw1D(seed, p) * plot;
-        sctx.beginPath();
-        sctx.arc(px, py, 7, 0, Math.PI * 2);
-        sctx.stroke();
-      });
-    }
-
-    // жирные точки в местах бросков
-    var r = Math.max(1.8, Math.min(4, g.slot * 0.34));
-    sctx.strokeStyle = '#111318';
-    sctx.lineWidth = 1.4;
-    for (i = 0; i < CELLS; i += rate) {
-      x = barX(g, i);
-      y = g.base - bars[i] * plot;
-      sctx.fillStyle = '#7aa2f7';
-      sctx.beginPath();
-      sctx.arc(x, y, r, 0, Math.PI * 2);
-      sctx.fill();
-      sctx.stroke();
-    }
-
-    // подписи бросков, если между ними хватает места
-    if (g.slot * rate >= 34) {
-      sctx.fillStyle = '#dde2ea';
-      sctx.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--mono');
-      sctx.textAlign = 'center';
-      sctx.textBaseline = 'bottom';
-      for (i = 0; i < CELLS; i += rate) {
-        x = barX(g, i);
-        y = g.base - bars[i] * plot - r - 4;
-        if (y < 10) y = 10;
-        sctx.fillText(num(bars[i]), Math.min(g.w - 14, Math.max(14, x)), y);
-      }
-    }
-  }
-
-  function tally() {
-    var thrown = 0;
-    for (var i = 0; i < CELLS; i += rate) thrown++;
-    var computed = CELLS - thrown;
-    if (computed === 0) {
-      tallyEl.innerHTML = 'Бросили все <b>' + thrown + '</b> чисел — считать нечего. ' +
-        'Это и есть чистый рандом.';
-    } else {
-      tallyEl.innerHTML = 'Бросили <b>' + thrown + '</b> ' + plural(thrown, 'число', 'числа', 'чисел') +
-        ', остальные <b>' + computed + '</b> ' + plural(computed, 'точку', 'точки', 'точек') +
-        ' посчитали между ними.';
-    }
-  }
-
-  function show1D(i) {
-    var c = cell1D(seed, rate, i);
-    if (c.thrown) {
-      sum1d.className = 'sum';
-      sum1d.innerHTML = 'Точка <b>' + i + '</b>: здесь число брошено — <span class="res">' +
-        num(c.value) + '</span>. Считать нечего.';
-      return;
-    }
-    var right = Math.round(c.share * 100);
-    var left = 100 - right;
-    sum1d.className = 'sum';
-    sum1d.innerHTML = 'Точка <b>' + i + '</b> стоит на <b>' + pct(c.frac) +
-      '</b> пути от левого броска к правому: слева бросок <b>' + num(c.left) +
-      '</b>, справа <b>' + num(c.right) + '</b>, от левого берём <b>' + left +
-      '%</b>, от правого <b>' + right + '%</b> → <span class="res">' + num(c.value) + '</span>';
-  }
-
-  function stripIndex(ev) {
-    var g = geom();
-    var r = stripEl.getBoundingClientRect();
-    var i = Math.round((ev.clientX - r.left - g.pad) / g.slot);
-    return Math.max(0, Math.min(CELLS - 1, i));
-  }
-
-  function onStrip(ev) {
-    var i = stripIndex(ev);
-    if (i === hoverI) return;
-    hoverI = i;
-    drawStrip();
-    show1D(i);
-  }
-
-  stripEl.addEventListener('pointermove', onStrip);
-  stripEl.addEventListener('pointerdown', onStrip);
 
   // ---------- картинки ----------
 
@@ -1014,14 +755,6 @@ function bandOf(v) {
     paint(ctxL, imgL, shadeL);
   }
 
-  function renderBars() {
-    bars = strip1D(seed, rate, CELLS);
-    if (hoverI < 0) hoverI = Math.min(CELLS - 1, Math.round(rate * 0.3));
-    drawStrip();
-    show1D(hoverI);
-    tally();
-  }
-
   function renderRate() {
     rateOut.textContent = rate === 1
       ? 'в каждой точке'
@@ -1064,14 +797,11 @@ function bandOf(v) {
     seed = seedFromText(text);
     renderLeft();
     renderRight();
-    renderBars();
   }
 
   function applyRate() {
     rate = RATES[Number(knob.value)];
-    hoverI = Math.min(CELLS - 1, Math.round(rate * 0.3));
     renderRate();
-    renderBars();
     renderRight();
     renderFoot();
   }
@@ -1112,13 +842,10 @@ function bandOf(v) {
   });
 
   window.addEventListener('resize', function () {
-    sizeStrip();
     sizeOver();
-    drawStrip();
     drawOver();
   });
 
-  sizeStrip();
   sizeOver();
   renderRate();
   renderLegend();

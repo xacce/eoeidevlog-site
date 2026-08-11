@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Из шума в галактику</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #181b21;
+    --panel-2: #1d212a;
+    --line: #2a2f3a;
+    --text: #dde2ea;
+    --dim: #8b94a3;
+    --dim-2: #6d7684;
+    --accent: #7aa2f7;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .demo {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+    overflow-wrap: break-word;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 0.6rem;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 0.82rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+    margin: 0 0 0.7rem;
+  }
+
+  p { margin: 0 0 0.8rem; }
+  p.lead { color: var(--dim); }
+  p:last-child { margin-bottom: 0; }
+
+  .block {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.9rem;
+    margin-top: 1.1rem;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  label {
+    font-size: 0.78rem;
+    color: var(--dim);
+  }
+
+  input[type="text"] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.95rem;
+  }
+
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  button {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.5rem 0.8rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  button:hover { border-color: var(--accent); }
+  button:active { background: #232833; }
+
+  button.primary {
+    background: #23324d;
+    border-color: #35507d;
+    color: #cfdcf7;
+  }
+
+  .note {
+    font-size: 0.82rem;
+    color: var(--dim);
+    margin-top: 0.6rem;
+  }
+
+  /* ---- шаги ---- */
+
+  .steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .steps .step {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--dim);
+  }
+
+  .steps .step b {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--dim-2);
+    flex: none;
+  }
+
+  .steps .step.on {
+    background: #23324d;
+    border-color: #35507d;
+    color: #cfdcf7;
+  }
+
+  .steps .step.on b { color: var(--accent); }
+  .steps .step.done b { color: #9db4e2; }
+
+  .cap {
+    margin-top: 0.7rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    min-height: 5.4em;
+  }
+
+  .cap b { color: var(--text); }
+  .cap span { color: var(--dim); }
+
+  .go {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.7rem;
+  }
+
+  /* ---- счётчик ---- */
+
+  .sum {
+    margin-top: 0.8rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .count {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.6rem;
+  }
+
+  .count .res {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 1.5rem;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+  }
+
+  .count .cap2 {
+    font-size: 0.88rem;
+    color: var(--dim);
+    min-width: 0;
+  }
+
+  /* ---- ручки ---- */
+
+  .knob {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .knob.off { display: none; }
+
+  .knob label {
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 22px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  input[type="range"]:focus { outline: none; }
+  input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px #23324d; }
+  input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px #23324d; }
+
+  .ends {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    font-size: 0.74rem;
+    color: var(--dim-2);
+  }
+
+  .ends span { min-width: 0; }
+
+  /* ---- картинки ---- */
+
+  .frame {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .frame canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #090b0f;
+  }
+
+  .cut {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 6 / 1;
+    margin-top: 0.7rem;
+  }
+
+  .cut canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #0d1016;
+  }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 1.6rem 0 0;
+  }
+
+  @media (max-width: 460px) {
+    .count .res { font-size: 1.3rem; }
+    .ends { font-size: 0.7rem; }
+    .cut { aspect-ratio: 4 / 1; }
+    .cap { min-height: 7em; }
+  }
+
+  @media (max-width: 400px) {
+    .demo { padding: 1.1rem 0.7rem 2rem; }
+    .steps .step { font-size: 0.8rem; padding: 0.45rem 0.35rem; gap: 0.25rem; }
+    .ends span:first-child { max-width: 48%; }
+    .ends span:last-child { max-width: 48%; text-align: right; }
+  }
+</style>
+</head>
+<body>
+<div class="demo">
+
+  <h1>Из шума в галактику</h1>
+  <p class="lead">Одно число даёт серые пятна — ни звёзд, ни спирали в них нет. Дальше
+  четыре шага, и на каждом добавляется ровно одно правило. Рукава при этом никто не
+  рисует: это те же пятна, только прочитанные по спирали.</p>
+
+  <div class="block">
+    <h2>Сид</h2>
+    <div class="controls">
+      <div class="field">
+        <label for="seedInput">Одно число на всю галактику — любой текст или число</label>
+        <input type="text" id="seedInput" value="12345" spellcheck="false" autocomplete="off">
+      </div>
+      <button class="primary" id="reseedBtn">Другая галактика</button>
+    </div>
+  </div>
+
+  <div class="block">
+    <h2>Четыре шага</h2>
+
+    <div class="steps" id="steps">
+      <button class="step on" data-step="1"><b>1</b> Шум</button>
+      <button class="step" data-step="2"><b>2</b> Закрутка</button>
+      <button class="step" data-step="3"><b>3</b> Форма</button>
+      <button class="step" data-step="4"><b>4</b> Черта</button>
+    </div>
+
+    <div class="frame">
+      <canvas id="cv" width="576" height="576" aria-label="картинка текущего шага"></canvas>
+    </div>
+
+    <div class="cap"><b id="capTitle">—</b> <span id="capText">—</span></div>
+
+    <div class="go">
+      <button class="primary" id="nextBtn">Дальше →</button>
+    </div>
+
+    <div class="knob off" id="knobTwist">
+      <label for="twist">Насколько закручиваем</label>
+      <input type="range" id="twist" min="0" max="60" step="1" value="30">
+      <div class="ends"><span>не закручиваем</span><span>в тугую спираль</span></div>
+    </div>
+
+    <div class="knob off" id="knobThr">
+      <label for="thr">Насколько густым должно быть облако, чтобы зажглась звезда</label>
+      <input type="range" id="thr" min="0" max="100" step="1" value="38">
+      <div class="ends"><span>хватает и лёгкой дымки</span><span>только в самой гуще</span></div>
+
+      <div class="sum count">
+        <span class="res" id="countOut">—</span>
+        <span class="cap2">звёзд зажглось</span>
+      </div>
+
+      <div class="cut">
+        <canvas id="cvCut" width="576" height="96" aria-label="разрез облака вдоль светлой полосы"></canvas>
+      </div>
+
+      <p class="note">Это то же облако, только сбоку: разрез вдоль светлой полосы на
+      картинке. Горы — там, где облако густое. Черта — то самое правило. Ниже черты не
+      загорается ничего; выше — загорается, и тем чаще, чем выше поднялась гора.</p>
+    </div>
+
+    <p class="note" id="foot">—</p>
+  </div>
+
+  <p class="note">Небо здесь — 256 на 256 клеток, в каждой может зажечься одна звезда,
+  и больше одной не бывает. Счётчик считает ровно те звёзды, что нарисованы. От шума
+  тут всё, что неровное: где облако гуще, где реже, где рукав, а где между рукавами
+  дыра. Правил всего три — закрутить, притушить край, поднять середину, — и они одни
+  и те же для любого сида.</p>
+
+  <hr class="sep">
+
+<script>
+// ===== CORE START =====
+// Хеш строки в 32-битное число. xmur3.
+function xmur3(str) {
+  var h = 1779033703 ^ str.length;
+  for (var i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  };
+}
+
+// Сид — из текста в поле ввода.
+function seedFromText(text) {
+  if (/^\d+$/.test(text)) return (Number(text) % 4294967296) >>> 0;
+  return xmur3(text)();
+}
+
+// Бросок в точке: целочисленный хеш от места и сида. Никакого состояния —
+// одно и то же место при одном сиде всегда даёт одно и то же число.
+function hashU32(x, y, seed) {
+  var h = (seed ^ 0x9E3779B9) | 0;
+  h = Math.imul(h ^ x, 0x85EBCA6B);
+  h = (h << 13) | (h >>> 19);
+  h = Math.imul(h ^ y, 0xC2B2AE35);
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x27D4EB2F);
+  h ^= h >>> 15;
+  return h >>> 0;
+}
+
+var SALT_2D = 0x2545F491;
+
+function throw2D(seed, x, y) {
+  return hashU32(x, y, (seed ^ SALT_2D) >>> 0) / 4294967296;
+}
+
+// Переход у бросков замедлен: не прямая, а S-образная кривая.
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+// То же поле, что и на стенде про шум: редкие броски и посчитанное между ними.
+// Только спросить его теперь надо не в узле решётки, а в любой дробной точке —
+// закрутка уводит выборку куда угодно между узлами.
+function noiseAt(seed, cell, x, y) {
+  var xf = x / cell, yf = y / cell;
+  var x0 = Math.floor(xf), y0 = Math.floor(yf);
+  var wx = smoothstep(xf - x0), wy = smoothstep(yf - y0);
+  var ax = x0 * cell, ay = y0 * cell, bx = (x0 + 1) * cell, by = (y0 + 1) * cell;
+  var v00 = throw2D(seed, ax, ay), v10 = throw2D(seed, bx, ay);
+  var v01 = throw2D(seed, ax, by), v11 = throw2D(seed, bx, by);
+  var top = v00 + (v10 - v00) * wx;
+  var bot = v01 + (v11 - v01) * wx;
+  return top + (bot - top) * wy;
+}
+
+// Три слоя разного размера, сложенные в одно облако: крупный решает, где вообще
+// густо, мелкие только рвут края. Ровно то же сложение масштабов, что на
+// соседнем стенде.
+var LAYERS = [[48, 1], [24, 0.5], [12, 0.25]];
+var LAYERS_W = 1.75;
+var LAYER_SALT = 7919;
+
+function cloudRaw(seed, x, y) {
+  var s = 0;
+  for (var i = 0; i < LAYERS.length; i++) {
+    s += LAYERS[i][1] * noiseAt(seed + i * LAYER_SALT, LAYERS[i][0], x, y);
+  }
+  return s / LAYERS_W;
+}
+
+// Сложенные слои жмутся к середине: единиц и нулей в сумме почти не бывает.
+// Растягиваем середину на весь размах, иначе облако выходит ровно серым и
+// никакая черта из него ничего не вырежет.
+var LO = 0.32, HI = 0.72;
+var FIELD_R = 96;
+var TWIST_EYE = 0.09;
+
+function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
+
+// Направление закрутки — от сида: половина галактик крутится в другую сторону.
+var SALT_SPIN = 0x51ED2701;
+function spinOf(seed) { return (hashU32(41, 43, (seed ^ SALT_SPIN) >>> 0) & 1) ? 1 : -1; }
+
+// Вот и вся закрутка. Точку не двигают и облако не пересчитывают: просто
+// спрашивают у него значение не там, где точка лежит, а там, куда её отнесло
+// поворотом вокруг середины. Чем дальше от середины, тем больше поворот, —
+// и прямые пятна читаются как рукава.
+function cloudAt(seed, px, py, twist, dir) {
+  var r = Math.sqrt(px * px + py * py);
+  var a = Math.atan2(py, px) + dir * twist * Math.log(r + TWIST_EYE);
+  var n = cloudRaw(seed, Math.cos(a) * r * FIELD_R, Math.sin(a) * r * FIELD_R);
+  return clamp01((n - LO) / (HI - LO));
+}
+
+// Форма: два правила поверх облака. Спад к краю — чтобы галактика кончалась,
+// а не заполняла кадр. Ядро — чтобы середина была ярче всего.
+var EDGE_R = 0.88, EDGE_PW = 3;
+var CORE_R = 0.17, CORE_AMP = 1.8;
+var FLOOR = 0.05;
+
+function shapeAt(r, cloud) {
+  var cr = r / CORE_R;
+  return Math.exp(-Math.pow(r / EDGE_R, EDGE_PW)) * (FLOOR + (1 - FLOOR) * cloud) +
+    CORE_AMP * Math.exp(-cr * cr);
+}
+
+// Картинка серых шагов. mix — насколько форма уже наложена: 0 — голое облако,
+// 1 — оно же со спадом и ядром. Между ними стенд переползает плавно.
+function greyField(size, seed, twist, mix, out) {
+  var dir = spinOf(seed), i = 0;
+  for (var y = 0; y < size; y++) {
+    var py = (y + 0.5) / size * 2 - 1;
+    for (var x = 0; x < size; x++, i++) {
+      var px = (x + 0.5) / size * 2 - 1;
+      var c = cloudAt(seed, px, py, twist, dir);
+      var v = c;
+      if (mix > 0) {
+        var r = Math.sqrt(px * px + py * py);
+        v = c + (shapeAt(r, c) - c) * mix;
+      }
+      out[i] = v > 1 ? 1 : v;
+    }
+  }
+  return out;
+}
+
+// Поле под звёзды: то же самое, но без обрезки сверху — ядро уходит выше
+// единицы, и это нужно, иначе в середине не выйдет сгущения.
+function densityField(size, seed, twist) {
+  var dir = spinOf(seed);
+  var out = new Float64Array(size * size);
+  var max = 0, i = 0;
+  for (var y = 0; y < size; y++) {
+    var py = (y + 0.5) / size * 2 - 1;
+    for (var x = 0; x < size; x++, i++) {
+      var px = (x + 0.5) / size * 2 - 1;
+      var r = Math.sqrt(px * px + py * py);
+      var v = shapeAt(r, cloudAt(seed, px, py, twist, dir));
+      out[i] = v;
+      if (v > max) max = v;
+    }
+  }
+  var dens = { d: out, max: max, ref: 0, size: size };
+  dens.ref = highLevel(dens, HIGH_PART);
+  return dens;
+}
+
+// Уровень, выше которого лежит заданная часть облака. Считается раскладкой по
+// тысяче полок, а не сортировкой: полок хватает, а поле большое.
+function highLevel(dens, part) {
+  var d = dens.d, n = d.length;
+  if (dens.max < 1e-9) return 0;
+  var bins = new Int32Array(1024);
+  var k = 1023 / dens.max;
+  for (var i = 0; i < n; i++) bins[(d[i] * k) | 0]++;
+  var want = n * part;
+  var acc = 0, b = 1023;
+  for (; b > 0; b--) {
+    acc += bins[b];
+    if (acc >= want) break;
+  }
+  return (b + 0.5) / k;
+}
+
+// Ручка ходит целыми делениями. Высота черты отсчитывается не от самой густой
+// точки: самая густая — это ядро, и шкала уехала бы вся в него. Отсчёт идёт от
+// уровня, выше которого лежит десятая часть облака, — он у всех сидов почти
+// одинаковый. Сам шаг ручки не прямой, а множительный: иначе половина шкалы
+// уходила бы на разницу между «очень много звёзд» и «просто много».
+var THR_STEPS = 100;
+var CUT_MIN = 0.30;
+var CUT_MAX = 1.90;
+var HIGH_PART = 0.10;
+
+function cutAt(step) {
+  var t = step / THR_STEPS;
+  if (t < 0) t = 0;
+  if (t > 1) t = 1;
+  return CUT_MIN * Math.pow(CUT_MAX / CUT_MIN, t);
+}
+
+// Закрутка: ручка ходит целыми делениями, значение — десятые.
+function twistAt(step) { return step / 10; }
+
+var SALT_JITTER = 0x1B873593;
+var SALT_GRAIN = 0x68E31DA4;
+var SALT_STAR = 0x3B9ACA07;
+
+// Место под звёзды: заводится один раз, дальше только переписывается.
+function makeStars(size) {
+  var n = size * size;
+  return {
+    n: 0,
+    x: new Float64Array(n),
+    y: new Float64Array(n),
+    b: new Float64Array(n),
+    t: new Uint8Array(n)
+  };
+}
+
+// Самый мелкий слой шума: свой бросок в каждой клетке, без всякого сглаживания
+// с соседями. Без него черта режет гладкое облако, а у гладкого облака срез —
+// это ровный контур: вместо россыпи звёзд выходит сплошное залитое пятно.
+function grainAt(gs, x, y) {
+  return hashU32(x, y, gs) / 4294967296;
+}
+
+// Звезда там, где густота, помноженная на бросок этой клетки, оказалась выше
+// черты. Оттого небо и редеет к краю плавно: чем гуще место, тем чаще бросок
+// дотягивает до черты, но нигде не дотягивают все подряд.
+//
+// Яркость — не «насколько выше черты»: почти все клетки стоят у самого среза,
+// и такое небо выходит ровно серым, без единой заметной звезды. Яркость —
+// свой отдельный бросок, взятый в кубе: слабых много, ярких единицы. Густое
+// место добавляет к ней немного сверху, поэтому ядро светлее рукавов.
+// Звезда сдвинута внутри своей клетки, иначе небо ложится ровной решёткой.
+function collectStars(dens, seed, thr, out) {
+  var size = dens.size, d = dens.d;
+  var gs = (seed ^ SALT_GRAIN) >>> 0;
+  var js = (seed ^ SALT_JITTER) >>> 0;
+  var ss = (seed ^ SALT_STAR) >>> 0;
+  var invMax = dens.max > 1e-9 ? 1 / dens.max : 1;
+  var k = 0;
+  for (var y = 0; y < size; y++) {
+    var row = y * size;
+    for (var x = 0; x < size; x++) {
+      var v = d[row + x];
+      if (v < thr) continue;
+      if (v * grainAt(gs, x, y) < thr) continue;
+      var h = hashU32(x, y, js);
+      out.x[k] = x + (h >>> 16) / 65536;
+      out.y[k] = y + (h & 65535) / 65536;
+      var s = hashU32(x, y, ss);
+      var u = (s >>> 8) / 16777216;
+      out.b[k] = u * u * u * (0.62 + 0.38 * v * invMax);
+      out.t[k] = s % 100;
+      k++;
+    }
+  }
+  out.n = k;
+  return out;
+}
+
+// Зажглась ли звезда ровно в этой клетке. Разрезу нужно спросить про одну
+// строку, а не перебирать всё небо заново.
+function starAt(dens, seed, thr, x, y) {
+  var v = dens.d[y * dens.size + x];
+  if (v < thr) return false;
+  return v * grainAt((seed ^ SALT_GRAIN) >>> 0, x, y) >= thr;
+}
+// ===== CORE END =====
+
+(function () {
+  var PIX = 576;
+  var FIELD = 256;
+  var K = PIX / FIELD;
+
+  // Серые шаги считаются в своём размере и растягиваются на холст. Во время
+  // движения — помельче, чтобы кадры шли подряд; как только остановились —
+  // покрупнее.
+  var GREY_STILL = 384;
+  var GREY_MOVE = 256;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var seedInput = $('seedInput');
+  var twistEl = $('twist');
+  var thrEl = $('thr');
+  var countOut = $('countOut');
+  var footEl = $('foot');
+  var capTitle = $('capTitle');
+  var capText = $('capText');
+  var nextBtn = $('nextBtn');
+  var knobTwist = $('knobTwist');
+  var knobThr = $('knobThr');
+  var stepBtns = $('steps').getElementsByTagName('button');
+
+  var ctx = $('cv').getContext('2d');
+  var img = ctx.createImageData(PIX, PIX);
+  var acc = new Float32Array(PIX * PIX * 3);
+
+  var greyBuf = new Float64Array(GREY_STILL * GREY_STILL);
+  var off = document.createElement('canvas');
+  var octx = off.getContext('2d');
+  var offImg = null, offSize = 0;
+
+  var cutCv = $('cvCut');
+  var cutCtx = cutCv.getContext('2d');
+  var CUT_W = cutCv.width, CUT_H = cutCv.height;
+
+  var TINTS = [[0.98, 0.97, 0.94], [0.72, 0.83, 1.00], [1.00, 0.80, 0.55]];
+
+  // Заранее посчитанные кривые: в кадре их считать дорого.
+  // Мягкий бок звезды.
+  var FALL_N = 512, FALL_MAX = 8;
+  var FALL = new Float32Array(FALL_N + 1);
+  for (var fi = 0; fi <= FALL_N; fi++) FALL[fi] = Math.exp(-fi * FALL_MAX / FALL_N);
+  var FALL_K = FALL_N / FALL_MAX;
+
+  // Насыщение: сколько бы света ни легло в точку, она не ярче белого.
+  var TONE_N = 1024, TONE_MAX = 6;
+  var TONE = new Float32Array(TONE_N + 1);
+  for (fi = 0; fi <= TONE_N; fi++) TONE[fi] = 1 - Math.exp(-fi * TONE_MAX / TONE_N);
+  var TONE_K = TONE_N / TONE_MAX;
+
+  // Куда какая точка холста попадает на поле — считается один раз.
+  var FX = new Int32Array(PIX);
+  for (fi = 0; fi < PIX; fi++) {
+    var f = (fi / K) | 0;
+    FX[fi] = f >= FIELD ? FIELD - 1 : f;
+  }
+
+  // Дымка под звёздами: то же облако, переведённое в яркость. Она видна всегда
+  // и нарочно слабая — читатель должен видеть, что звёзды сидят на светлых
+  // местах облака, но не должен смотреть на серый экран вместо неба.
+  var HAZE = 46;
+  var hazeVal = new Float32Array(FIELD * FIELD);
+
+  // Разрез взят не по середине: посередине ядро, и оно закрыло бы собой всё,
+  // ради чего разрез рисуется. Строка проходит по диску, где рукава и провалы
+  // между ними видны в полный рост.
+  var SLICE = Math.round(FIELD * 0.31);
+  var SLICE_Y0 = (SLICE * K) | 0, SLICE_Y1 = SLICE_Y0 + 2;
+
+  var STEPS = [
+    {
+      title: 'Пятна от одного числа.',
+      text: 'Никакой галактики тут нет: где-то облако гуще, где-то реже, и это всё. ' +
+        'Числа брошены редко, а между ними посчитано — тот самый шум с прошлого стенда, ' +
+        'только сложенный из трёх слоёв разного размера.'
+    },
+    {
+      title: 'Закрутили вокруг середины.',
+      text: 'Ничего нового не посчитано: то же облако, но спрошено не там, где точка ' +
+        'лежит, а там, куда её отнесло поворотом. Чем дальше от середины, тем сильнее ' +
+        'поворот — и пятна вытягиваются в рукава. Покрутите ручку: рукава не нарисованы, ' +
+        'они и есть эти пятна.'
+    },
+    {
+      title: 'Спад к краю и ядро.',
+      text: 'Два правила поверх: чем дальше от середины, тем тусклее, и в самой середине ' +
+        'ярче всего. Края гаснут, галактика перестаёт упираться в рамку, а посередине ' +
+        'появляется то, что станет ядром.'
+    },
+    {
+      title: 'Черта.',
+      text: 'Звезда зажигается там, где облако гуще некоторой черты. Двигайте черту: ' +
+        'облако при этом не меняется вообще, меняется только правило, — а небо то ' +
+        'заполняется, то пустеет.'
+    }
+  ];
+
+  var seed = 0;
+  var step = 1;
+  var twist = twistAt(Number(twistEl.value));
+  var thr = 0;
+  var dens = null;
+  var densTwist = -1;
+  var stars = makeStars(FIELD);
+
+  // Что показано прямо сейчас. Во время переходов это не совпадает с шагом:
+  // шаг уже новый, а картинка ещё переползает.
+  var showTwist = 0;
+  var showMix = 0;
+  var showCut = 0;
+  var showStars = false;
+  var moving = false;
+
+  var anim = null;
+  var pending = 0;
+
+  function fmt(n) {
+    var s = String(n), out = '';
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 === 0) out += ' ';
+      out += s.charAt(i);
+    }
+    return out;
+  }
+
+  // ---------- серые шаги ----------
+
+  function paintGrey(size) {
+    if (offSize !== size) {
+      off.width = off.height = size;
+      offImg = octx.createImageData(size, size);
+      offSize = size;
+    }
+    greyField(size, seed, showTwist, showMix, greyBuf);
+    var d = offImg.data;
+    for (var i = 0, p = 0; i < size * size; i++, p += 4) {
+      var v = greyBuf[i];
+      d[p] = 10 + 226 * v;
+      d[p + 1] = 13 + 226 * v;
+      d[p + 2] = 20 + 226 * v;
+      d[p + 3] = 255;
+    }
+    octx.putImageData(offImg, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, 0, 0, size, size, 0, 0, PIX, PIX);
+  }
+
+  // ---------- небо ----------
+
+  function splat(px, py, sigma, amp, tint, rad) {
+    var inv = 1 / (2 * sigma * sigma) * FALL_K;
+    var t0 = tint[0] * amp, t1 = tint[1] * amp, t2 = tint[2] * amp;
+    var cx = px | 0, cy = py | 0;
+    var y0 = cy - rad, y1 = cy + rad, x0 = cx - rad, x1 = cx + rad;
+    if (y0 < 0) y0 = 0;
+    if (x0 < 0) x0 = 0;
+    if (y1 >= PIX) y1 = PIX - 1;
+    if (x1 >= PIX) x1 = PIX - 1;
+    for (var yy = y0; yy <= y1; yy++) {
+      var dy = yy + 0.5 - py;
+      var dy2 = dy * dy;
+      var row = yy * PIX;
+      for (var xx = x0; xx <= x1; xx++) {
+        var dx = xx + 0.5 - px;
+        var k = (dx * dx + dy2) * inv;
+        if (k >= FALL_N) continue;
+        var w = FALL[k | 0];
+        var p = (row + xx) * 3;
+        acc[p] += t0 * w;
+        acc[p + 1] += t1 * w;
+        acc[p + 2] += t2 * w;
+      }
+    }
+  }
+
+  function paintSky() {
+    var i;
+    for (i = 0; i < acc.length; i++) acc[i] = 0;
+
+    // Звезда — тугая точка, а не мягкое пятно: пятна на таком поле слипаются
+    // в одну муть. Ореол — только у ярких, иначе он съедает всё небо.
+    for (i = 0; i < stars.n; i++) {
+      var t = stars.t[i];
+      var tint = TINTS[t < 62 ? 0 : (t < 86 ? 1 : 2)];
+      var b = stars.b[i];
+      var px = stars.x[i] * K, py = stars.y[i] * K;
+      splat(px, py, 0.55, 0.75 + 5.0 * b * b, tint, 2);
+      if (b > 0.45) splat(px, py, 2.0, 0.30 * (b - 0.45) / 0.55, tint, 5);
+    }
+
+    var d = img.data;
+    for (var y = 0; y < PIX; y++) {
+      var frow = FX[y] * FIELD;
+      var slice = y >= SLICE_Y0 && y <= SLICE_Y1;
+      var p = y * PIX * 3, q = y * PIX * 4;
+      for (var x = 0; x < PIX; x++, p += 3, q += 4) {
+        var g = hazeVal[frow + FX[x]];
+        var b0 = 9 + g * 0.72, b1 = 11 + g * 0.80, b2 = 16 + g;
+        if (slice) { b0 += 5; b1 += 7; b2 += 16; }
+        var a0 = acc[p], a1 = acc[p + 1], a2 = acc[p + 2];
+        if (a0 !== 0) {
+          var k0 = a0 * TONE_K;
+          d[q] = b0 + (255 - b0) * (k0 >= TONE_N ? 1 : TONE[k0 | 0]);
+        } else d[q] = b0;
+        if (a1 !== 0) {
+          var k1 = a1 * TONE_K;
+          d[q + 1] = b1 + (255 - b1) * (k1 >= TONE_N ? 1 : TONE[k1 | 0]);
+        } else d[q + 1] = b1;
+        if (a2 !== 0) {
+          var k2 = a2 * TONE_K;
+          d[q + 2] = b2 + (255 - b2) * (k2 >= TONE_N ? 1 : TONE[k2 | 0]);
+        } else d[q + 2] = b2;
+        d[q + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // ---------- разрез ----------
+
+  // Тот же ряд облака, показанный сбоку. Всё, что ниже черты, — тусклое: там
+  // не загорится ничего. Всё, что выше, — светлое, и над ним стоят точки тех
+  // звёзд, которые в этом ряду действительно зажглись.
+  function paintCut() {
+    var top = 6, bottom = CUT_H - 1;
+    var span = bottom - top;
+    var row = SLICE * FIELD;
+
+    // Шкала: горы этого ряда занимают панель целиком. Черта на самых строгих
+    // делениях ручки упирается в потолок — так и есть, в этом ряду тогда не
+    // зажигается ничего.
+    var rowMax = 0;
+    for (var i = 0; i < FIELD; i++) if (dens.d[row + i] > rowMax) rowMax = dens.d[row + i];
+    var scale = Math.max(rowMax, dens.ref * 1.15);
+    var inv = scale > 1e-9 ? 1 / scale : 1;
+
+    var lineY = bottom - thr * inv * span;
+    if (lineY < top) lineY = top;
+    if (lineY > bottom) lineY = bottom;
+
+    cutCtx.fillStyle = '#0d1016';
+    cutCtx.fillRect(0, 0, CUT_W, CUT_H);
+
+    var colW = CUT_W / FIELD;
+    for (var fx = 0; fx < FIELD; fx++) {
+      var h = dens.d[row + fx] * inv * span;
+      var yTop = bottom - h;
+      if (yTop < 0) yTop = 0;
+      var x = fx * colW;
+      var w = colW + 0.6;
+      if (yTop >= lineY) {
+        cutCtx.fillStyle = '#1b2130';
+        cutCtx.fillRect(x, yTop, w, bottom - yTop);
+      } else {
+        cutCtx.fillStyle = '#1b2130';
+        cutCtx.fillRect(x, lineY, w, bottom - lineY);
+        cutCtx.fillStyle = '#46618f';
+        cutCtx.fillRect(x, yTop, w, lineY - yTop);
+      }
+    }
+
+    cutCtx.fillStyle = '#7aa2f7';
+    cutCtx.fillRect(0, lineY - 1, CUT_W, 2);
+
+    // Звёзды этого ряда — точками над своей горой.
+    cutCtx.fillStyle = '#ffffff';
+    for (fx = 0; fx < FIELD; fx++) {
+      if (!starAt(dens, seed, thr, fx, SLICE)) continue;
+      var y = bottom - dens.d[row + fx] * inv * span - 4;
+      if (y < 0) y = 0;
+      cutCtx.fillRect(fx * colW - 0.5, y, 2, 2);
+    }
+  }
+
+  // ---------- подписи ----------
+
+  function renderFoot() {
+    if (step < 4) {
+      footEl.textContent = step === 1
+        ? 'Один и тот же сид всегда даёт одно и то же облако. Смените сид — поменяются пятна, а шаги останутся теми же.'
+        : (step === 2
+          ? 'Обратите внимание: при закрутке ноль это ровно картинка первого шага. Ничего не подменили.'
+          : 'Дальше по этому облаку пройдёт черта, и оно станет небом.');
+      return;
+    }
+    var part = stars.n / (FIELD * FIELD);
+    if (part > 0.14) {
+      footEl.textContent = 'Черта сейчас низкая: звёзды сели даже в лёгкой дымке между рукавами. ' +
+        'Поднимите её — останутся одни рукава.';
+    } else if (part < 0.004) {
+      footEl.textContent = 'Черта сейчас высокая: осталось одно ядро. Опустите её — рукава вернутся.';
+    } else {
+      footEl.textContent = 'Рукава и середина густые, между рукавами пусто — это закрученное облако. ' +
+        'А какая именно клетка внутри рукава загорится, решает бросок в этой клетке.';
+    }
+  }
+
+  function renderCap() {
+    var s = STEPS[step - 1];
+    capTitle.textContent = s.title;
+    capText.textContent = s.text;
+    for (var i = 0; i < stepBtns.length; i++) {
+      var n = i + 1;
+      stepBtns[i].className = 'step' + (n === step ? ' on' : (n < step ? ' done' : ''));
+    }
+    knobTwist.className = step >= 2 ? 'knob' : 'knob off';
+    knobThr.className = step >= 4 ? 'knob' : 'knob off';
+    nextBtn.textContent = step === 4 ? '← Сначала' : 'Дальше →';
+  }
+
+  // ---------- сборка ----------
+
+  function needDens() {
+    if (dens && densTwist === showTwist) return;
+    dens = densityField(FIELD, seed, showTwist);
+    densTwist = showTwist;
+    var invMax = dens.max > 1e-9 ? 1 / dens.max : 1;
+    for (var i = 0; i < hazeVal.length; i++) {
+      var v = dens.d[i] * invMax;
+      hazeVal[i] = HAZE * v * v;
+    }
+  }
+
+  function draw() {
+    if (!showStars) {
+      paintGrey(moving ? GREY_MOVE : GREY_STILL);
+      return;
+    }
+    needDens();
+    thr = dens.ref * showCut;
+    collectStars(dens, seed, thr, stars);
+    countOut.textContent = fmt(stars.n);
+    paintSky();
+    paintCut();
+  }
+
+  function schedule() {
+    if (pending) return;
+    pending = 1;
+    requestAnimationFrame(function () {
+      pending = 0;
+      draw();
+      renderFoot();
+    });
+  }
+
+  // ---------- переходы ----------
+
+  // Каждый переход вперёд — это одна ползущая величина: закрутка, наложение
+  // формы или высота черты. Кадры считаются по времени, а не по счётчику:
+  // на медленной машине переход просто короче по числу кадров.
+  function ease(t) { return t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t); }
+
+  function animate(ms, apply, done) {
+    if (anim) cancelAnimationFrame(anim);
+    moving = true;
+    var t0 = (window.performance || Date).now();
+    function frame() {
+      var t = ((window.performance || Date).now() - t0) / ms;
+      if (t >= 1) t = 1;
+      apply(ease(t));
+      draw();
+      if (t < 1) { anim = requestAnimationFrame(frame); return; }
+      anim = null;
+      moving = false;
+      if (done) done();
+      draw();
+      renderFoot();
+    }
+    anim = requestAnimationFrame(frame);
+  }
+
+  function goto(next) {
+    var prev = step;
+    step = next;
+    renderCap();
+    if (anim) { cancelAnimationFrame(anim); anim = null; moving = false; }
+
+    var wantTwist = step >= 2 ? twist : 0;
+    var wantMix = step >= 3 ? 1 : 0;
+    var wantStars = step >= 4;
+
+    if (step === 2 && prev < 2 && twist > 0) {
+      showMix = 0; showStars = false;
+      animate(750, function (t) { showTwist = twist * t; });
+      return;
+    }
+    if (step === 3 && prev < 3) {
+      showTwist = wantTwist; showStars = false;
+      animate(650, function (t) { showMix = t; });
+      return;
+    }
+    if (step === 4 && prev < 4) {
+      showTwist = wantTwist; showMix = 1; showStars = true;
+      needDens();
+      var from = CUT_MAX, to = cutAt(Number(thrEl.value));
+      animate(800, function (t) { showCut = from * Math.pow(to / from, t); });
+      return;
+    }
+
+    showTwist = wantTwist;
+    showMix = wantMix;
+    showStars = wantStars;
+    showCut = cutAt(Number(thrEl.value));
+    draw();
+    renderFoot();
+  }
+
+  // ---------- ручки ----------
+
+  twistEl.addEventListener('input', function () {
+    if (anim) { cancelAnimationFrame(anim); anim = null; }
+    twist = twistAt(Number(twistEl.value));
+    showTwist = twist;
+    moving = true;
+    schedule();
+  });
+
+  function settle() {
+    if (!moving) return;
+    moving = false;
+    schedule();
+  }
+
+  twistEl.addEventListener('change', settle);
+  twistEl.addEventListener('pointerup', settle);
+
+  thrEl.addEventListener('input', function () {
+    if (anim) { cancelAnimationFrame(anim); anim = null; moving = false; }
+    showCut = cutAt(Number(thrEl.value));
+    schedule();
+  });
+
+  for (var bi = 0; bi < stepBtns.length; bi++) {
+    stepBtns[bi].addEventListener('click', function () {
+      goto(Number(this.getAttribute('data-step')));
+    });
+  }
+
+  nextBtn.addEventListener('click', function () {
+    goto(step === 4 ? 1 : step + 1);
+  });
+
+  function reseed(text) {
+    seedInput.value = text;
+    seed = seedFromText(text);
+    dens = null;
+    densTwist = -1;
+    if (anim) { cancelAnimationFrame(anim); anim = null; moving = false; }
+    showTwist = step >= 2 ? twist : 0;
+    showMix = step >= 3 ? 1 : 0;
+    showStars = step >= 4;
+    showCut = cutAt(Number(thrEl.value));
+    draw();
+    renderFoot();
+  }
+
+  $('reseedBtn').addEventListener('click', function () {
+    reseed(String(Math.floor(Math.random() * 4294967296)));
+  });
+
+  seedInput.addEventListener('change', function () {
+    var text = seedInput.value;
+    if (text.length === 0) text = '0';
+    reseed(text);
+  });
+
+  seedInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') seedInput.blur();
+  });
+
+  renderCap();
+  reseed(seedInput.value);
+})();
+</script>
+</div>
+</body>
+</html>

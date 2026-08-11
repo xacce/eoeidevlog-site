@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Собери посылку</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #181b21;
+    --panel-2: #1d212a;
+    --line: #2a2f3a;
+    --text: #dde2ea;
+    --dim: #8b94a3;
+    --dim-2: #6d7684;
+    --accent: #7aa2f7;
+    --good: #6fae7a;
+    --bad: #d86a5c;
+    --probe: #7aa2f7;
+    --build: #d7a45c;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .demo {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+    overflow-wrap: break-word;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 0.6rem;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 0.82rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+    margin: 0 0 0.7rem;
+  }
+
+  p { margin: 0 0 0.8rem; }
+  p.lead { color: var(--dim); }
+  p:last-child { margin-bottom: 0; }
+
+  .block {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.9rem;
+    margin-top: 1.1rem;
+  }
+
+  .note {
+    font-size: 0.82rem;
+    color: var(--dim);
+    margin-top: 0.6rem;
+  }
+
+  /* ---- число мира ---- */
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  label.cap { font-size: 0.78rem; color: var(--dim); }
+
+  input[type="text"] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.95rem;
+  }
+
+  input[type="text"]:focus { outline: none; border-color: var(--accent); }
+
+  button {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.5rem 0.8rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  button:hover { border-color: var(--accent); }
+  button:active { background: #232833; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button:disabled:hover { border-color: var(--line); }
+
+  button.primary {
+    background: #23324d;
+    border-color: #35507d;
+    color: #cfdcf7;
+  }
+
+  .seedout {
+    margin-top: 0.7rem;
+    font-size: 0.88rem;
+    color: var(--dim);
+    overflow-wrap: anywhere;
+  }
+
+  .seedout b {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .seedout i {
+    font-style: normal;
+    font-size: 0.78rem;
+    color: var(--dim-2);
+  }
+
+  /* ---- список позиций ---- */
+
+  .items { display: flex; flex-direction: column; gap: 0.35rem; }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    min-width: 0;
+  }
+
+  .item:hover { border-color: var(--accent); }
+  .item.on { border-color: #35507d; background: #1b2231; }
+
+  .item input { position: absolute; opacity: 0; width: 0; height: 0; }
+
+  .item .box {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border: 1px solid var(--dim-2);
+    border-radius: 3px;
+    background: var(--bg);
+  }
+
+  .item.on .box {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: inset 0 0 0 3px #1b2231;
+  }
+
+  .item input:focus-visible + .box { box-shadow: 0 0 0 3px #23324d; }
+
+  .item .nm {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: clamp(12px, 3vw, 14px);
+    overflow-wrap: anywhere;
+  }
+
+  .item .nm i {
+    display: block;
+    font-style: normal;
+    font-size: 0.76rem;
+    color: var(--dim);
+    line-height: 1.35;
+  }
+
+  .item .wt {
+    flex: none;
+    font-family: var(--mono);
+    font-size: clamp(11px, 2.6vw, 13px);
+    color: var(--dim);
+    text-align: right;
+  }
+
+  .item.on .wt { color: var(--text); }
+
+  .sum {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-top: 0.7rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.9rem;
+  }
+
+  .sum .big {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .row-btns { display: flex; gap: 0.5rem; margin-top: 0.7rem; flex-wrap: wrap; }
+
+  /* ---- провод ---- */
+
+  .wire {
+    position: relative;
+    height: 34px;
+    margin-top: 0.9rem;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: #0c0e13;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .wire::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .pack {
+    position: absolute;
+    top: 50%;
+    height: 12px;
+    margin-top: -6px;
+    background: var(--accent);
+    border-radius: 6px;
+    opacity: 0;
+  }
+
+  .wire .ends {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.5rem;
+    font-size: 0.72rem;
+    color: var(--dim-2);
+    pointer-events: none;
+  }
+
+  /* ---- экраны ---- */
+
+  .screens {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    width: 100%;
+  }
+
+  .screen { min-width: 0; }
+
+  .who { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem; }
+  .who span { font-weight: 400; color: var(--dim); font-size: 0.82rem; }
+
+  .frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .frame canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #0c0e13;
+  }
+
+  .frame .veil {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--dim-2);
+    background: rgba(12, 14, 19, 0.86);
+    border-radius: 6px;
+  }
+
+  .frame .veil.off { display: none; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    color: var(--dim);
+  }
+
+  .legend b { display: inline-block; width: 9px; height: 9px; margin-right: 0.35rem; }
+  .legend .p { background: var(--probe); border-radius: 50%; }
+  .legend .s { background: var(--build); }
+
+  /* ---- вердикт ---- */
+
+  .verdict {
+    margin-top: 1.1rem;
+    padding: 0.65rem 0.75rem;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .verdict.good { border-left-color: var(--good); }
+  .verdict.best { border-left-color: var(--good); background: #16241a; }
+  .verdict.bad { border-left-color: var(--bad); }
+
+  .verdict .hd { font-weight: 600; margin-bottom: 0.2rem; }
+  .verdict.good .hd, .verdict.best .hd { color: #b6d6bc; }
+  .verdict.bad .hd { color: #e8b3ab; }
+
+  .verdict ul { margin: 0.35rem 0 0; padding-left: 1.1rem; color: var(--dim); }
+  .verdict li { margin-bottom: 0.15rem; }
+  .verdict b { font-family: var(--mono); font-weight: 600; color: var(--text); }
+
+  .best-line { margin-top: 0.6rem; font-size: 0.82rem; color: var(--dim); }
+  .best-line b { font-family: var(--mono); color: var(--text); font-weight: 600; }
+
+  hr.sep { border: none; border-top: 1px solid var(--line); margin: 1.6rem 0 0; }
+
+  @media (max-width: 460px) {
+    .screens { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
+  }
+
+  @media (max-width: 380px) {
+    .demo { padding: 1.1rem 0.7rem 2rem; }
+    .item { padding: 0.4rem 0.45rem; gap: 0.45rem; }
+  }
+</style>
+</head>
+<body>
+<div class="demo">
+
+  <h1>Собери посылку</h1>
+  <p class="lead">Вы с товарищем в одной партии, и у него должен получиться твой мир.
+  Канал узкий, поэтому вопрос не «что переслать», а «чего не пересылать». Всё, что
+  выводится из числа партии, товарищ посчитает у себя сам. Всё, что вы наделали руками,
+  он не посчитает никогда. Собери посылку полегче — так, чтобы мир на том конце всё же
+  сошёлся.</p>
+
+  <div class="block">
+    <h2>Ваша партия</h2>
+    <div class="controls">
+      <div class="field">
+        <label class="cap" for="numInput">Что угодно: слово, число, кличка кота</label>
+        <input type="text" id="numInput" value="12345" spellcheck="false" autocomplete="off">
+      </div>
+      <button class="primary" id="randBtn">Другая партия</button>
+    </div>
+    <div class="seedout">Число вашей партии: <b id="seedOut">—</b> <i>четыре байта</i></div>
+    <p class="note">Что бы ты ни набрал, партия — это одно число от нуля до
+    4 294 967 295, и записывается оно четырьмя байтами. Столько же занимает пятёрка,
+    столько же — самое длинное из этих чисел. У товарища партия своя, со своим числом.
+    Чего ты не пришлёшь, то он досчитает из него — и получится чужое.</p>
+  </div>
+
+  <div class="block">
+    <h2>Что кладём в посылку</h2>
+    <div class="items" id="items"></div>
+
+    <div class="sum">
+      <span>Вес посылки</span>
+      <span class="big" id="sumBytes">—</span>
+    </div>
+
+    <div class="row-btns">
+      <button id="allBtn">Положить всё</button>
+      <button id="noneBtn">Выложить всё</button>
+      <button class="primary" id="sendBtn">Отправить</button>
+    </div>
+
+    <div class="wire">
+      <div class="ends"><span>ты</span><span>товарищ</span></div>
+      <div class="pack" id="pack"></div>
+    </div>
+
+    <p class="note">Веса тут не выдуманы, а посчитаны по тому, что реально пришлось бы
+    записать: место звезды — два числа, цвет и размер — ещё два, планеты — одно. Имя
+    приходится слать буквами, потому оно и самое дорогое. Длина поезда на проводе —
+    это вес посылки.</p>
+  </div>
+
+  <div class="block">
+    <h2>Что вышло</h2>
+    <div class="screens">
+      <div class="screen">
+        <div class="who">Твой мир</div>
+        <div class="frame"><canvas id="cvA" aria-label="Твой мир"></canvas></div>
+      </div>
+      <div class="screen">
+        <div class="who">У товарища</div>
+        <div class="frame">
+          <canvas id="cvB" aria-label="Мир, который собрался у товарища"></canvas>
+          <div class="veil" id="veil">Посылка ещё не отправлена.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><b class="p"></b>зонды</span>
+      <span><b class="s"></b>постройки</span>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict">
+    <div class="hd">Посылка не отправлена</div>
+    <div>Отметь, что кладёшь, и жми «Отправить».</div>
+  </div>
+
+  <div class="best-line" id="bestLine"></div>
+
+  <hr class="sep">
+
+<script>
+// ===== CORE START =====
+// Хеш строки в 32-битное число. xmur3.
+function xmur3(str) {
+  var h = 1779033703 ^ str.length;
+  for (var i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  };
+}
+
+// Поток долей 0..1 из одного 32-битного числа. mulberry32.
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Число партии из того, что набрали в поле. Что бы там ни стояло — «12345»,
+// «привет» или пустая строка, — на выходе одно целое число от нуля до
+// 4 294 967 295. Именно оно и есть партия, а не набранный текст.
+function seedFromText(text) {
+  return xmur3(String(text))();
+}
+
+// Сид звезды: хеш от числа партии и порядкового номера. Никакого состояния между
+// звёздами — сорок вторая звезда считается одна, без первых сорока одной.
+function starSeed(seed, index) {
+  return xmur3(seed + '#' + index)();
+}
+
+// Поле галактики — 1024 на 1024, как в игре. Координаты звёзд целые.
+var FIELD = 1024;
+var STAR_COUNT = 240;
+
+// Число, по которому товарищ считает свою партию. Оно у него уже есть, ты его
+// не присылал — потому мир и выходит чужой, если своё число не положить.
+var OTHER_SEED = 3141592653;
+
+var SYL_A = [
+  'Ар', 'Вел', 'Кор', 'Тан', 'Ил', 'Ос', 'Дран', 'Ней',
+  'Сол', 'Мар', 'Эн', 'Ул', 'Кас', 'Тир', 'Фел', 'Зан'
+];
+var SYL_B = [
+  'ка', 'мир', 'тон', 'дар', 'вис', 'лея', 'рон', 'нар',
+  'тис', 'фа', 'гея', 'сор', 'нея', 'дун', 'рик', 'ша'
+];
+var SUFFIX = ['', '', '', ' Альфа', ' Бета', ' Гамма', ' Дельта', ' Эпсилон'];
+
+var COLORS = [
+  { name: 'голубая', rgb: [150, 190, 255] },
+  { name: 'белая', rgb: [228, 236, 248] },
+  { name: 'жёлтая', rgb: [247, 224, 150] },
+  { name: 'оранжевая', rgb: [240, 176, 110] },
+  { name: 'красная', rgb: [228, 124, 110] }
+];
+var COLOR_WEIGHTS = [8, 18, 26, 26, 22];
+
+function pickWeighted(u, weights) {
+  var total = 0, i;
+  for (i = 0; i < weights.length; i++) total += weights[i];
+  var acc = 0;
+  for (i = 0; i < weights.length; i++) {
+    acc += weights[i] / total;
+    if (u < acc) return i;
+  }
+  return weights.length - 1;
+}
+
+function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+// Плотное ядро и два рукава.
+var CORE_SHARE = 0.28;
+var CORE_R = 0.085;
+var EDGE_R = 0.46;
+var TURNS = 0.9;
+
+function makeStar(seed, index) {
+  var rnd = mulberry32(starSeed(seed, index));
+
+  var t = Math.pow(rnd(), 0.7);
+  var arm = rnd() < 0.5 ? 0 : 1;
+  var wobble = rnd() + rnd() - 1;
+  var jitter = rnd() - 0.5;
+
+  var ang, r;
+  if (t < CORE_SHARE) {
+    ang = (jitter + 0.5) * Math.PI * 2;
+    r = CORE_R * (t / CORE_SHARE);
+  } else {
+    var tt = (t - CORE_SHARE) / (1 - CORE_SHARE);
+    ang = tt * TURNS * Math.PI * 2 + arm * Math.PI + wobble * (0.26 * (1 - tt) + 0.06);
+    r = CORE_R + tt * (EDGE_R - CORE_R) + jitter * 0.02;
+  }
+
+  var st = { index: index };
+  st.x = Math.round(clamp01(0.5 + r * Math.cos(ang)) * (FIELD - 1));
+  st.y = Math.round(clamp01(0.5 + r * Math.sin(ang) * 0.95) * (FIELD - 1));
+  st.color = pickWeighted(rnd(), COLOR_WEIGHTS);
+  st.sizeTenths = 4 + Math.floor(rnd() * 26);
+  st.planets = Math.floor(rnd() * 10);
+  st.name = SYL_A[Math.floor(rnd() * SYL_A.length)] +
+            SYL_B[Math.floor(rnd() * SYL_B.length)] +
+            SUFFIX[Math.floor(rnd() * SUFFIX.length)];
+  return st;
+}
+
+function makeGalaxy(seed, count) {
+  var out = [];
+  for (var i = 0; i < count; i++) out.push(makeStar(seed, i));
+  return out;
+}
+
+// Зонды и постройки. Какие звёзды занял игрок — решил игрок, а не число мира:
+// выбор берётся из журнала партии, которого у товарища нет и быть не может.
+// Из числа мира это не выводится ни при каких условиях.
+var PROBE_COUNT = 12;
+var BUILD_COUNT = 9;
+var BUILD_KINDS = ['рудник', 'верфь', 'завод', 'станция', 'антенна'];
+
+function pickedStars(tag, count, total) {
+  var rnd = mulberry32(xmur3('журнал партии/' + tag)());
+  var taken = {};
+  var out = [];
+  while (out.length < count) {
+    var i = Math.floor(rnd() * total);
+    if (taken[i]) continue;
+    taken[i] = 1;
+    out.push(i);
+  }
+  return out;
+}
+
+function makeProbes(stars) {
+  var idx = pickedStars('зонды', PROBE_COUNT, stars.length);
+  var out = [];
+  for (var i = 0; i < idx.length; i++) {
+    var s = stars[idx[i]];
+    out.push({ x: s.x, y: s.y, version: 1 + (i % 4) });
+  }
+  return out;
+}
+
+function makeBuildings(stars) {
+  var idx = pickedStars('постройки', BUILD_COUNT, stars.length);
+  var rnd = mulberry32(xmur3('журнал партии/вид')());
+  var out = [];
+  for (var i = 0; i < idx.length; i++) {
+    var s = stars[idx[i]];
+    out.push({ x: s.x, y: s.y, kind: BUILD_KINDS[Math.floor(rnd() * BUILD_KINDS.length)] });
+  }
+  return out;
+}
+
+// Позиции посылки.
+var SLOTS = [
+  { key: 'seed',   name: 'Число вашей партии',
+    hint: 'из него считается вся галактика' },
+  { key: 'pos',    name: 'Где стоят звёзды',
+    hint: 'два числа на каждую из 240' },
+  { key: 'names',  name: 'Как звёзды называются',
+    hint: 'имя каждой, буквами' },
+  { key: 'look',   name: 'Цвет и размер звёзд',
+    hint: 'по два числа на звезду' },
+  { key: 'plan',   name: 'Сколько где планет',
+    hint: 'одно число на звезду' },
+  { key: 'probes', name: 'Где чьи зонды',
+    hint: 'это вы расставили сами' },
+  { key: 'builds', name: 'Что уже построено',
+    hint: 'это вы построили сами' }
+];
+
+// Сколько байт занимает каждая позиция, если записать её так, как она уйдёт по
+// проводу. Число партии — четыре байта: в них влезает любое число от нуля до
+// 4 294 967 295, и «5» занимает ровно столько же, сколько «4 294 967 295».
+// Координата на поле 1024 — два байта. Цвет, размер и число планет — по одному.
+// Имя — единственное, что приходится слать буквами, потому оно и дорогое.
+var SEED_BYTES = 4;
+var COORD_BYTES = 2;
+
+function slotBytes(key, world) {
+  var stars = world.stars, n = stars.length, i, sum;
+  if (key === 'seed') return SEED_BYTES;
+  if (key === 'pos') return n * COORD_BYTES * 2;
+  if (key === 'names') {
+    sum = 0;
+    for (i = 0; i < n; i++) sum += 1 + byteLength(stars[i].name);
+    return sum;
+  }
+  if (key === 'look') return n * 2;
+  if (key === 'plan') return n * 1;
+  if (key === 'probes') return world.probes.length * (COORD_BYTES * 2 + 1);
+  if (key === 'builds') return world.buildings.length * (COORD_BYTES * 2 + 1);
+  return 0;
+}
+
+// Выписка куска мира — ею миры сравниваются между собой. К весу отношения не
+// имеет: вес считает slotBytes.
+function slotText(key, world) {
+  var stars = world.stars, lines = [], i, s;
+  if (key === 'seed') return String(world.seed);
+  if (key === 'pos') {
+    for (i = 0; i < stars.length; i++) { s = stars[i]; lines.push(s.index + ';' + s.x + ';' + s.y); }
+    return lines.join('\n');
+  }
+  if (key === 'names') {
+    for (i = 0; i < stars.length; i++) { s = stars[i]; lines.push(s.index + ';' + s.name); }
+    return lines.join('\n');
+  }
+  if (key === 'look') {
+    for (i = 0; i < stars.length; i++) {
+      s = stars[i];
+      lines.push(s.index + ';' + COLORS[s.color].name + ';' + (s.sizeTenths / 10).toFixed(1));
+    }
+    return lines.join('\n');
+  }
+  if (key === 'plan') {
+    for (i = 0; i < stars.length; i++) { s = stars[i]; lines.push(s.index + ';' + s.planets); }
+    return lines.join('\n');
+  }
+  if (key === 'probes') {
+    for (i = 0; i < world.probes.length; i++) {
+      s = world.probes[i];
+      lines.push(s.x + ';' + s.y + ';' + s.version);
+    }
+    return lines.join('\n');
+  }
+  if (key === 'builds') {
+    for (i = 0; i < world.buildings.length; i++) {
+      s = world.buildings[i];
+      lines.push(s.x + ';' + s.y + ';' + s.kind);
+    }
+    return lines.join('\n');
+  }
+  return '';
+}
+
+// Длина строки в байтах. Русские буквы занимают по два байта, латиница и
+// цифры по одному — считаем честно.
+function byteLength(str) {
+  var n = 0;
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    if (c < 0x80) n += 1;
+    else if (c < 0x800) n += 2;
+    else if (c >= 0xD800 && c <= 0xDBFF) { n += 4; i++; }
+    else n += 3;
+  }
+  return n;
+}
+
+function makeWorld(seed) {
+  var stars = makeGalaxy(seed, STAR_COUNT);
+  return {
+    seed: seed,
+    stars: stars,
+    probes: makeProbes(stars),
+    buildings: makeBuildings(stars)
+  };
+}
+
+function slotWeights(world) {
+  var out = {};
+  for (var i = 0; i < SLOTS.length; i++) {
+    out[SLOTS[i].key] = slotBytes(SLOTS[i].key, world);
+  }
+  return out;
+}
+
+function packWeight(world, sel) {
+  var w = slotWeights(world), total = 0;
+  for (var i = 0; i < SLOTS.length; i++) if (sel[SLOTS[i].key]) total += w[SLOTS[i].key];
+  return total;
+}
+
+// Легче этого мир не соберётся: число партии плюс то, что из числа не выводится.
+function minWeight(world) {
+  var w = slotWeights(world);
+  return w.seed + w.probes + w.builds;
+}
+
+// Что соберётся у товарища. Чего в посылке не было — он досчитал из своего числа.
+function receive(world, sel) {
+  var base = sel.seed ? world.seed : OTHER_SEED;
+  var stars = makeGalaxy(base, STAR_COUNT);
+  for (var i = 0; i < stars.length; i++) {
+    var mine = world.stars[i];
+    if (sel.pos) { stars[i].x = mine.x; stars[i].y = mine.y; }
+    if (sel.names) stars[i].name = mine.name;
+    if (sel.look) { stars[i].color = mine.color; stars[i].sizeTenths = mine.sizeTenths; }
+    if (sel.plan) stars[i].planets = mine.planets;
+  }
+  return {
+    seed: base,
+    stars: stars,
+    probes: sel.probes ? world.probes.slice() : [],
+    buildings: sel.builds ? world.buildings.slice() : []
+  };
+}
+
+// Расхождения между двумя мирами, словами. Сравниваются посчитанные миры,
+// а не список галочек: показанное человеку и посчитанное — одно и то же.
+function diffs(mine, his) {
+  var out = [];
+  if (slotText('pos', mine) !== slotText('pos', his)) out.push('звёзды стоят не там');
+  if (slotText('names', mine) !== slotText('names', his)) out.push('у звёзд чужие имена');
+  if (slotText('look', mine) !== slotText('look', his)) out.push('цвета и размеры не те');
+  if (slotText('plan', mine) !== slotText('plan', his)) out.push('планеты не сходятся');
+  if (slotText('probes', mine) !== slotText('probes', his)) out.push('твоих зондов у него нет');
+  if (slotText('builds', mine) !== slotText('builds', his)) out.push('твоих построек у него нет');
+  return out;
+}
+// ===== CORE END =====
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var numInput = $('numInput');
+  var itemsEl = $('items');
+  var sumEl = $('sumBytes');
+  var sendBtn = $('sendBtn');
+  var packEl = $('pack');
+  var wireEl = packEl.parentNode;
+  var veilEl = $('veil');
+  var verdictEl = $('verdict');
+  var bestEl = $('bestLine');
+  var seedOutEl = $('seedOut');
+  var cvA = $('cvA');
+  var cvB = $('cvB');
+  var ctxA = cvA.getContext('2d');
+  var ctxB = cvB.getContext('2d');
+
+  // Скорость канала: столько байт в секунду ползёт по проводу. Число условное,
+  // оно нужно только чтобы разница в весе стала разницей во времени.
+  var RATE = 2200;
+  var MIN_FLIGHT = 180;
+  var MAX_FLIGHT = 3400;
+
+  var world = null;
+  var sel = { seed: false, pos: true, names: true, look: true, plan: true, probes: true, builds: true };
+  var shown = null;      // мир, который сейчас на правом экране
+  var progress = 0;      // сколько его уже долетело, 0..1
+  var flying = false;
+  var best = 0;
+  var wA = 0, wB = 0;
+
+  function plural(n, one, few, many) {
+    var n10 = n % 10, n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return one;
+    if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return few;
+    return many;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
+    });
+  }
+
+  function groupDigits(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  function weightWords(n) {
+    if (n < 1024) return n + ' ' + plural(n, 'байт', 'байта', 'байт');
+    return (n / 1024).toFixed(1) + ' килобайта';
+  }
+
+  function rgbOf(star) {
+    var c = COLORS[star.color].rgb;
+    return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')';
+  }
+
+  // ---------- список позиций ----------
+
+  function buildItems() {
+    itemsEl.innerHTML = '';
+    for (var i = 0; i < SLOTS.length; i++) {
+      var s = SLOTS[i];
+      var lab = document.createElement('label');
+      lab.className = 'item';
+      lab.setAttribute('data-key', s.key);
+      lab.innerHTML =
+        '<input type="checkbox" data-key="' + s.key + '">' +
+        '<span class="box" aria-hidden="true"></span>' +
+        '<span class="nm">' + esc(s.name) + '<i>' + esc(s.hint) + '</i></span>' +
+        '<span class="wt" data-wt="' + s.key + '">—</span>';
+      itemsEl.appendChild(lab);
+    }
+    itemsEl.addEventListener('change', function (e) {
+      var k = e.target.getAttribute('data-key');
+      if (!k) return;
+      sel[k] = e.target.checked;
+      syncItems();
+      renderSum();
+      invalidate();
+    });
+  }
+
+  function syncItems() {
+    var boxes = itemsEl.querySelectorAll('input[type="checkbox"]');
+    for (var i = 0; i < boxes.length; i++) {
+      var k = boxes[i].getAttribute('data-key');
+      boxes[i].checked = !!sel[k];
+      boxes[i].parentNode.className = sel[k] ? 'item on' : 'item';
+    }
+  }
+
+  function renderSum() {
+    var w = slotWeights(world);
+    for (var i = 0; i < SLOTS.length; i++) {
+      var k = SLOTS[i].key;
+      var el = itemsEl.querySelector('[data-wt="' + k + '"]');
+      if (el) el.textContent = weightWords(w[k]);
+    }
+    sumEl.textContent = weightWords(packWeight(world, sel));
+  }
+
+  // ---------- рисование ----------
+
+  function sizeCanvas(cv, ctx) {
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || 260;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(w * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return w;
+  }
+
+  function drawWorld(ctx, w, wr, part) {
+    ctx.clearRect(0, 0, w, w);
+    ctx.fillStyle = '#0c0e13';
+    ctx.fillRect(0, 0, w, w);
+
+    if (!wr) return;
+
+    var glow = ctx.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w * 0.5);
+    glow.addColorStop(0, 'rgba(120,150,220,0.15)');
+    glow.addColorStop(1, 'rgba(120,150,220,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, w);
+
+    var stars = wr.stars;
+    var n = Math.floor(stars.length * part);
+    var k = w / FIELD;
+    var scale = w / 300;
+    var i, st, r;
+
+    ctx.globalAlpha = 0.16;
+    for (i = 0; i < n; i++) {
+      st = stars[i];
+      r = (0.9 + st.sizeTenths * 0.07) * scale;
+      ctx.fillStyle = rgbOf(st);
+      ctx.beginPath();
+      ctx.arc(st.x * k, st.y * k, r * 2.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    for (i = 0; i < n; i++) {
+      st = stars[i];
+      r = (0.9 + st.sizeTenths * 0.07) * scale;
+      ctx.fillStyle = rgbOf(st);
+      ctx.beginPath();
+      ctx.arc(st.x * k, st.y * k, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (part < 1) return;
+
+    var side = Math.max(4, 3.4 * scale);
+    for (i = 0; i < wr.buildings.length; i++) {
+      var b = wr.buildings[i];
+      ctx.fillStyle = '#d7a45c';
+      ctx.fillRect(b.x * k - side / 2, b.y * k - side / 2, side, side);
+    }
+
+    for (i = 0; i < wr.probes.length; i++) {
+      var p = wr.probes[i];
+      var rr = Math.max(2.6, 2.2 * scale);
+      ctx.strokeStyle = '#7aa2f7';
+      ctx.lineWidth = Math.max(1.1, 0.9 * scale);
+      ctx.beginPath();
+      ctx.arc(p.x * k, p.y * k, rr * 1.9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#7aa2f7';
+      ctx.beginPath();
+      ctx.arc(p.x * k, p.y * k, rr * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function redraw() {
+    drawWorld(ctxA, wA, world, 1);
+    drawWorld(ctxB, wB, shown, progress);
+  }
+
+  // ---------- отправка ----------
+
+  function invalidate() {
+    shown = null;
+    progress = 0;
+    veilEl.className = 'veil';
+    veilEl.textContent = 'Посылка изменилась. Отправь заново.';
+    verdictEl.className = 'verdict';
+    verdictEl.innerHTML =
+      '<div class="hd">Посылка не отправлена</div>' +
+      '<div>Отметь, что кладёшь, и жми «Отправить».</div>';
+    redraw();
+  }
+
+  function send() {
+    if (flying) return;
+    var bytes = packWeight(world, sel);
+    var his = receive(world, sel);
+
+    var ms = Math.max(MIN_FLIGHT, Math.min(MAX_FLIGHT, bytes / RATE * 1000));
+    var wireW = wireEl.clientWidth || 300;
+    var len = Math.max(8, Math.min(wireW * 0.62, wireW * 0.62 * (bytes / Math.max(1, packWeight(world, allSel())))));
+
+    shown = his;
+    progress = 0;
+    veilEl.className = 'veil off';
+    flying = true;
+    sendBtn.disabled = true;
+
+    packEl.style.width = len + 'px';
+    packEl.style.opacity = '1';
+
+    var start = performance.now();
+    function step(now) {
+      var t = Math.min(1, (now - start) / ms);
+      packEl.style.transform = 'translateX(' + (-len + t * (wireW + len)) + 'px)';
+      progress = t;
+      redraw();
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        packEl.style.opacity = '0';
+        flying = false;
+        sendBtn.disabled = false;
+        renderVerdict(bytes, his);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function allSel() {
+    var s = {};
+    for (var i = 0; i < SLOTS.length; i++) s[SLOTS[i].key] = true;
+    return s;
+  }
+
+  // ---------- вердикт ----------
+
+  function renderVerdict(bytes, his) {
+    var bad = diffs(world, his);
+    var floor = minWeight(world);
+    var full = packWeight(world, allSel());
+
+    if (bad.length) {
+      verdictEl.className = 'verdict bad';
+      var li = '';
+      for (var i = 0; i < bad.length; i++) li += '<li>' + esc(bad[i]) + '</li>';
+      verdictEl.innerHTML =
+        '<div class="hd">Мир не сошёлся</div>' +
+        '<div>Ушло <b>' + weightWords(bytes) + '</b>, и товарищ смотрит не в твою партию:</div>' +
+        '<ul>' + li + '</ul>';
+      return;
+    }
+
+    if (bytes <= floor) {
+      verdictEl.className = 'verdict best';
+      verdictEl.innerHTML =
+        '<div class="hd">Мир сошёлся, и легче некуда</div>' +
+        '<div>По сети ушло <b>' + weightWords(bytes) + '</b>. Всю галактику — места, имена, ' +
+        'цвета, планеты — товарищ посчитал сам из твоего числа. Осталось только то, ' +
+        'что придумали вы: зонды и постройки. Их не выведет никакое число.</div>';
+    } else {
+      var times = Math.round(bytes / Math.max(1, floor));
+      verdictEl.className = 'verdict good';
+      verdictEl.innerHTML =
+        '<div class="hd">Мир сошёлся, но посылка тяжёлая</div>' +
+        '<div>Ушло <b>' + weightWords(bytes) + '</b> там, где хватило бы <b>' +
+        weightWords(floor) + '</b> — ' + (times > 1 ? 'в ' + times + ' ' +
+        plural(times, 'раз', 'раза', 'раз') + ' меньше' : 'меньше') +
+        '. Всё лишнее товарищ посчитал бы у себя сам.</div>';
+    }
+
+    if (!best || bytes < best) best = bytes;
+    renderBest(full);
+  }
+
+  function renderBest(full) {
+    if (!best) { bestEl.textContent = ''; return; }
+    bestEl.innerHTML = 'Твоя самая лёгкая удачная посылка: <b>' + weightWords(best) +
+      '</b>. Пересылкой мира целиком это было бы <b>' + weightWords(full) + '</b>.';
+  }
+
+  // ---------- пересчёт ----------
+
+  function rebuild() {
+    var text = numInput.value;
+    if (text.length === 0) { text = '0'; numInput.value = text; }
+    world = makeWorld(seedFromText(text));
+    seedOutEl.textContent = groupDigits(world.seed);
+    best = 0;
+    bestEl.textContent = '';
+    syncItems();
+    renderSum();
+    invalidate();
+  }
+
+  // ---------- органы управления ----------
+
+  $('randBtn').addEventListener('click', function () {
+    numInput.value = String(Math.floor(Math.random() * 4294967296));
+    rebuild();
+  });
+
+  numInput.addEventListener('change', rebuild);
+  numInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') numInput.blur();
+  });
+
+  $('allBtn').addEventListener('click', function () {
+    sel = allSel();
+    syncItems();
+    renderSum();
+    invalidate();
+  });
+
+  $('noneBtn').addEventListener('click', function () {
+    for (var i = 0; i < SLOTS.length; i++) sel[SLOTS[i].key] = false;
+    syncItems();
+    renderSum();
+    invalidate();
+  });
+
+  sendBtn.addEventListener('click', send);
+
+  function fit() {
+    wA = sizeCanvas(cvA, ctxA);
+    wB = sizeCanvas(cvB, ctxB);
+    redraw();
+  }
+
+  window.addEventListener('resize', fit);
+
+  buildItems();
+  wA = sizeCanvas(cvA, ctxA);
+  wB = sizeCanvas(cvB, ctxB);
+  rebuild();
+})();
+</script>
+</div>
+</body>
+</html>

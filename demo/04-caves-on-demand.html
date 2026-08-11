@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пещера на месте, хотя её никто не хранил</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #181b21;
+    --panel-2: #1d212a;
+    --line: #2a2f3a;
+    --text: #dde2ea;
+    --dim: #8b94a3;
+    --dim-2: #6d7684;
+    --accent: #7aa2f7;
+    --amber: #d8a35c;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .demo {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+    overflow-wrap: break-word;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 0.6rem;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 0.82rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+    margin: 0 0 0.7rem;
+  }
+
+  p { margin: 0 0 0.8rem; }
+  p.lead { color: var(--dim); }
+  p:last-child { margin-bottom: 0; }
+
+  .block {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.9rem;
+    margin-top: 1.1rem;
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  label {
+    font-size: 0.78rem;
+    color: var(--dim);
+  }
+
+  input[type="text"] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.95rem;
+  }
+
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  button {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.5rem 0.8rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  button:hover { border-color: var(--accent); }
+  button:active { background: #232833; }
+
+  button.primary {
+    background: #23324d;
+    border-color: #35507d;
+    color: #cfdcf7;
+  }
+
+  .note {
+    font-size: 0.82rem;
+    color: var(--dim);
+    margin-top: 0.6rem;
+  }
+
+  /* ——— окно в мир ——— */
+
+  .hud {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.2rem 0.8rem;
+    font-size: clamp(11px, 2.2vw, 12.5px);
+    color: var(--dim);
+    margin-bottom: 0.45rem;
+  }
+
+  .hud b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .hud .here { color: var(--accent); }
+
+  canvas.win {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 600 / 220;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #0d1015;
+    touch-action: pan-y;
+  }
+
+  canvas.strip {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 14px;
+    margin-top: 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg);
+  }
+
+  .walk {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+  }
+
+  .walk button {
+    flex: 1 1 40%;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  .walk button.on {
+    background: #23324d;
+    border-color: #35507d;
+    color: #cfdcf7;
+  }
+
+  .jump { margin-top: 0.7rem; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 22px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  input[type="range"]:focus { outline: none; }
+  input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px #23324d; }
+  input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px #23324d; }
+
+  .ends {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    font-size: 0.74rem;
+    color: var(--dim-2);
+  }
+
+  /* ——— карточка пещеры ——— */
+
+  .card {
+    padding: 0.7rem 0.8rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+  }
+
+  .card.empty {
+    border-left-color: var(--line);
+    color: var(--dim-2);
+    font-size: 0.85rem;
+  }
+
+  .cname {
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 0.15rem;
+    overflow-wrap: break-word;
+  }
+
+  .crar {
+    font-size: 0.78rem;
+    color: var(--dim);
+    margin-bottom: 0.5rem;
+  }
+
+  .rows {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: 0.15rem 0.7rem;
+    font-size: 0.87rem;
+    margin: 0;
+  }
+
+  .rows dt { color: var(--dim); }
+  .rows dd {
+    margin: 0;
+    font-family: var(--mono);
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .determinism {
+    margin-top: 0.7rem;
+    padding: 0.5rem 0.6rem;
+    border-left: 2px solid var(--line);
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+
+  .determinism.match { border-left-color: #6fae7a; color: #b6d6bc; }
+  .determinism.mismatch { border-left-color: #d86a5c; color: #e8b3ab; }
+
+  /* ——— счётчики ——— */
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .stat {
+    min-width: 0;
+    padding: 0.45rem 0.55rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+  }
+
+  .stat .k {
+    font-size: clamp(10px, 2.1vw, 11.5px);
+    color: var(--dim);
+    line-height: 1.35;
+  }
+
+  .stat .v {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    color: var(--text);
+  }
+
+  .stat.hot { border-left: 3px solid var(--accent); }
+  .stat.hot .v { color: var(--accent); }
+  .stat.cold { border-left: 3px solid var(--amber); }
+  .stat.cold .v { color: var(--amber); }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 1.6rem 0 0;
+  }
+
+  @media (max-width: 380px) {
+    .demo { padding: 1.1rem 0.7rem 2rem; }
+  }
+</style>
+</head>
+<body>
+<div class="demo">
+
+  <h1>Пещера на месте, хотя её никто не хранил</h1>
+  <p class="lead">Мир длиной двадцать километров, и ни одна пещера в нём нигде не
+  записана. Кусок мира считают в тот момент, когда игрок к нему подошёл, и
+  выбрасывают, когда он ушёл. Вернулся — посчитали заново, и вышло то же самое,
+  до последнего камня.</p>
+
+  <div class="block">
+    <h2>Число мира</h2>
+    <div class="controls">
+      <div class="field">
+        <label for="worldSeed">Одно число на весь мир — любой текст или число</label>
+        <input type="text" id="worldSeed" value="12345" spellcheck="false" autocomplete="off">
+      </div>
+      <button class="primary" id="reseedBtn">Другое число</button>
+    </div>
+    <p class="note">Поменяешь — пещеры станут другими, все двадцать километров сразу.</p>
+  </div>
+
+  <div class="block">
+    <h2>Вид сбоку</h2>
+
+    <div class="hud">
+      <span>километр <b id="km">0.0</b></span>
+      <span class="here" id="where">наверху</span>
+    </div>
+
+    <canvas class="win" id="view" aria-label="Разрез мира сбоку: земля, проход под ней, человечек идёт по проходу"></canvas>
+    <canvas class="strip" id="strip" aria-label="Вся длина мира: светлым отмечены куски, которые сейчас посчитаны"></canvas>
+
+    <div class="walk">
+      <button id="leftBtn">← идти влево</button>
+      <button id="rightBtn">идти вправо →</button>
+    </div>
+
+    <div class="jump">
+      <input type="range" id="jump" min="0" max="20000" step="1" value="0"
+             aria-label="Перепрыгнуть в любое место мира">
+      <div class="ends"><span>начало</span><span>двадцатый километр</span></div>
+    </div>
+
+    <p class="note">Тёмное по краям не лежит нигде: ни на диске, ни в памяти.
+    Отойдёшь — погаснет и то, что светится сейчас.</p>
+  </div>
+
+  <div class="block">
+    <h2>Кусок под ногами</h2>
+    <div class="card empty" id="card">—</div>
+    <div class="determinism" id="det">—</div>
+  </div>
+
+  <div class="block">
+    <h2>Сколько всего держим</h2>
+    <div class="stats">
+      <div class="stat hot">
+        <div class="k">держим в голове</div>
+        <div class="v" id="liveOut">—</div>
+      </div>
+      <div class="stat cold">
+        <div class="k">если бы хранили</div>
+        <div class="v" id="storedOut">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">посчитано заново</div>
+        <div class="v" id="buildsOut">—</div>
+      </div>
+    </div>
+    <p class="note">Первое число не растёт, сколько ни ходи. Третье — плата за то,
+    что первое стоит на месте.</p>
+  </div>
+
+  <hr class="sep">
+
+<script>
+// ===== CORE START =====
+// Хеш строки в 32-битное число. xmur3.
+function xmur3(str) {
+  var h = 1779033703 ^ str.length;
+  for (var i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return h >>> 0;
+  };
+}
+
+// Поток долей 0..1 из одного 32-битного числа. mulberry32.
+function mulberry32(a) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Число мира — из текста в поле ввода.
+function seedFromText(text) {
+  if (/^\d+$/.test(text)) return (Number(text) % 4294967296) >>> 0;
+  return xmur3(text)();
+}
+
+var WORLD_M = 20000;                     // длина мира в метрах
+var CHUNK_M = 100;                       // длина одного куска мира
+var CHUNK_COUNT = WORLD_M / CHUNK_M;     // сколько всего кусков
+var KEEP = 1;                            // сколько кусков держим по сторонам от игрока
+var MAX_DEPTH = 34;                      // глубже пол не опускается, в метрах
+var CORRIDOR_H = 3.2;                    // высота хода между залами, в метрах
+var FLAT = 0.62;                         // какая доля зала — ровный пол и ровный потолок
+
+// Что может лежать в зале. Набор зашит здесь и больше нигде.
+var STUFF = [
+  { key: 'chest',  name: 'сундук' },
+  { key: 'lake',   name: 'озеро' },
+  { key: 'drip',   name: 'сталактиты' },
+  { key: 'shroom', name: 'гриб' },
+  { key: 'bones',  name: 'кости' }
+];
+
+var ADJ = [
+  'Гулкая', 'Тихая', 'Сырая', 'Косая', 'Слепая', 'Ржавая',
+  'Низкая', 'Дальняя', 'Кривая', 'Тёплая', 'Пыльная', 'Мшистая'
+];
+var NOUN = ['щель', 'нора', 'промоина', 'пустота', 'галерея', 'штольня', 'яма', 'трещина'];
+
+// Пещера куска: щель на поверхности, отвесный спуск, два зала на одной глубине и
+// подъём наружу с другой стороны. Всё до последнего камня выводится из числа мира и
+// номера куска, никакого состояния снаружи — поэтому кусок всегда выходит один и тот же.
+function buildCave(seed, ci) {
+  var rnd = mulberry32(xmur3(seed + ':' + ci)());
+  if (rnd() > 0.82) return null;            // примерно каждый шестой кусок пустой
+
+  var base = ci * CHUNK_M;
+  var xa = base + 12 + Math.floor(rnd() * 6);             // щель входа
+  var xb = base + 88 - Math.floor(rnd() * 6);             // щель выхода
+  var sr = 8 + Math.floor(rnd() * 4);                     // сколько метров занимает спуск
+  var g0 = xa + sr, g1 = xb - sr;                         // где начинается и кончается галерея
+  var rxCap = Math.floor((g1 - g0 - 8) / 4);
+  if (rxCap > 12) rxCap = 12;
+  if (rxCap < 6) rxCap = 6;
+
+  var level = 16 + Math.floor(rnd() * 13);                // глубина галереи
+  var halls = [];
+  for (var i = 0; i < 2; i++) {
+    var rx = 8 + Math.floor(rnd() * 5);
+    if (rx > rxCap) rx = rxCap;
+    var y = level + Math.floor(rnd() * 10) - 3;           // залы стоят ступенькой
+    if (y < 14) y = 14;
+    if (y > MAX_DEPTH) y = MAX_DEPTH;
+    var hh = 7 + Math.floor(rnd() * 3);                   // высота зала от пола
+    var item = rnd() < 0.6 ? Math.floor(rnd() * STUFF.length) : -1;
+    halls.push({ x: 0, y: y, rx: rx, hh: hh, item: item });
+  }
+  halls[0].x = g0 + halls[0].rx;
+  halls[1].x = g1 - halls[1].rx;
+
+  var name = ADJ[Math.floor(rnd() * ADJ.length)] + ' ' + NOUN[Math.floor(rnd() * NOUN.length)];
+
+  // Опорные точки пола. У каждого зала их две — по краям ровного пола, чтобы внутри
+  // зала человечек шёл по горизонтали, а не по склону.
+  // Первые два с половиной метра пол падает почти отвесно: на поверхности пещера
+  // должна быть узкой щелью, иначе кусок читается не как пещера, а как овраг.
+  var path = [{ x: xa, y: 0 }, { x: xa + 2.5, y: 7 }];
+  var depth = 0;
+  for (i = 0; i < halls.length; i++) {
+    var h = halls[i];
+    path.push({ x: h.x - h.rx * FLAT, y: h.y });
+    path.push({ x: h.x + h.rx * FLAT, y: h.y });
+    if (h.y > depth) depth = h.y;
+  }
+  path.push({ x: xb - 2.5, y: 7 });
+  path.push({ x: xb, y: 0 });
+
+  return {
+    id: ci, name: name, xa: xa, xb: xb,
+    halls: halls, path: path, depth: depth
+  };
+}
+
+// Пол прохода в точке. Между опорными точками — сглаженный переход, у самих точек
+// пол горизонтален, поэтому спуск нигде не ломается углом.
+function floorAt(cave, m) {
+  var p = cave.path;
+  if (m <= p[0].x || m >= p[p.length - 1].x) return 0;
+  for (var i = 1; i < p.length; i++) {
+    if (m <= p[i].x) {
+      var a = p[i - 1], b = p[i];
+      var t = (m - a.x) / (b.x - a.x);
+      var s = t * t * (3 - 2 * t);
+      return a.y + (b.y - a.y) * s;
+    }
+  }
+  return 0;
+}
+
+// Высота прохода в точке: в середине зала потолок ровный, к краям спадает до высоты
+// хода. Ровный потолок над ровным полом — это и читается как зал, а не как расширение.
+function heightAt(cave, m) {
+  var h = CORRIDOR_H;
+  for (var i = 0; i < cave.halls.length; i++) {
+    var hall = cave.halls[i];
+    var u = Math.abs(m - hall.x) / hall.rx;
+    if (u >= 1) continue;
+    var f = 1;
+    if (u > FLAT) {
+      var t = (1 - u) / (1 - FLAT);
+      f = t * t * (3 - 2 * t);
+    }
+    var v = CORRIDOR_H + (hall.hh - CORRIDOR_H) * f;
+    if (v > h) h = v;
+  }
+  return h;
+}
+
+// Крутизна пола в точке. По ней считается шаг игрока: он идёт с постоянной скоростью
+// вдоль пола, поэтому на отвесном спуске продвигается вдоль медленнее и не проваливается
+// рывком, а сползает.
+function floorSlopeAt(cave, m) {
+  return Math.abs(floorAt(cave, m + 0.15) - floorAt(cave, m - 0.15)) / 0.3;
+}
+
+// Шаг игрока за кадр. Крутизну смотрим и там, где он стоит, и там, куда шагнёт:
+// иначе на входе в щель, стоя ещё на ровной земле, он перемахнул бы её край.
+function stepAlongFloor(cave, m, dir, dist) {
+  if (!cave) return m + dir * dist;
+  var s = floorSlopeAt(cave, m);
+  for (var i = 0; i < 2; i++) {
+    var t = m + dir * dist / Math.sqrt(1 + s * s);
+    var s2 = floorSlopeAt(cave, t);
+    if (s2 <= s) break;
+    s = s2;
+  }
+  return m + dir * dist / Math.sqrt(1 + s * s);
+}
+
+// Потолок прохода. Выше земли не поднимается: у входа проход выклинивается в щель.
+function ceilAt(cave, m) {
+  var c = floorAt(cave, m) - heightAt(cave, m);
+  return c < 0 ? 0 : c;
+}
+
+function buildChunk(seed, ci) {
+  return { index: ci, cave: buildCave(seed, ci) };
+}
+
+// Отпечаток куска — только чтобы сравнить два расчёта одного куска между собой.
+function chunkStamp(ch) {
+  var cave = ch.cave;
+  if (!cave) return 'пусто';
+  var parts = [cave.name, cave.xa, cave.xb, cave.depth];
+  for (var i = 0; i < cave.halls.length; i++) {
+    var h = cave.halls[i];
+    parts.push(h.x + '/' + h.y + '/' + h.rx + '/' + h.hh + '/' + h.item);
+  }
+  return parts.join(',');
+}
+
+function chunkIndexOf(m) {
+  var i = Math.floor(m / CHUNK_M);
+  if (i < 0) return 0;
+  if (i > CHUNK_COUNT - 1) return CHUNK_COUNT - 1;
+  return i;
+}
+
+// Мир вокруг игрока: что посчитано прямо сейчас, что выброшено и сколько раз какой
+// кусок собирали заново. Сверка идёт по пересчёту куска, а не по заходу в пещеру:
+// отпечаток снимается в момент сборки и сравнивается с отпечатком первой сборки.
+function makeStream(seedText) {
+  var seed = seedFromText(seedText);
+  var live = {};        // номер куска → посчитанный кусок
+  var firstOf = {};     // номер куска → отпечаток первой сборки
+  var timesOf = {};     // номер куска → сколько раз собирали
+  var seenN = 0;        // сколько разных кусков вообще собирали
+  var builds = 0;       // сколько сборок было всего, включая повторные
+  var badN = 0;         // сколько сборок разошлись с первой
+
+  function focus(m) {
+    var c = chunkIndexOf(m);
+    var lo = c - KEEP, hi = c + KEEP;
+    if (lo < 0) lo = 0;
+    if (hi > CHUNK_COUNT - 1) hi = CHUNK_COUNT - 1;
+    var k, i;
+    for (k in live) {
+      i = Number(k);
+      if (i < lo || i > hi) delete live[k];
+    }
+    for (i = lo; i <= hi; i++) {
+      if (live[i]) continue;
+      var ch = buildChunk(seed, i);
+      live[i] = ch;
+      builds++;
+      var st = chunkStamp(ch);
+      if (firstOf[i] === undefined) {
+        firstOf[i] = st;
+        timesOf[i] = 1;
+        seenN++;
+      } else {
+        timesOf[i]++;
+        if (firstOf[i] !== st) badN++;
+      }
+    }
+  }
+
+  return {
+    seed: seed,
+    focus: focus,
+    liveChunk: function (i) { return live[i] || null; },
+    liveCount: function () { var n = 0; for (var k in live) n++; return n; },
+    liveIndexes: function () {
+      var out = [];
+      for (var k in live) out.push(Number(k));
+      out.sort(function (a, b) { return a - b; });
+      return out;
+    },
+    seenAt: function (i) { return firstOf[i] !== undefined; },
+    timesAt: function (i) { return timesOf[i] || 0; },
+    storedCount: function () { return seenN; },
+    buildCount: function () { return builds; },
+    mismatchCount: function () { return badN; }
+  };
+}
+// ===== CORE END =====
+
+(function () {
+  var VW = 600, VH = 220;      // окно рисуем в своих единицах и сжимаем под ширину колонки
+  var SKY = 54;                // сколько в окне неба
+  var scale = 1;               // во сколько раз окно сжато под ширину колонки
+  var VIEW_M = 320;            // сколько метров мира видно за раз
+  var PX_X = VW / VIEW_M;      // пикселей на метр вдоль
+  var PX_Y = 4.0;              // вглубь растянуто, иначе проход не разглядеть
+  var SPEED = 40;              // метров в секунду вдоль пола
+
+  var C_SKY = '#12161d';
+  var C_VOID = '#0d1015';
+  var C_ROCK = '#262d38';
+  var C_SOIL = '#38424f';
+  var C_EDGE = '#4b5769';
+  var C_DIVIDER = '#1f2733';
+  var C_HOLE = '#05070a';
+  var C_RIM = '#5b6879';
+  var C_RIM_HOT = '#7aa2f7';
+  var C_LABEL = '#7d8798';
+  var C_GUY = '#f2f5fa';
+  var C_AMBER = '#d8a35c';
+  var C_WATER = '#3f7ea8';
+  var C_PALE = '#9aa3b1';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var seedInput = $('worldSeed');
+  var view = $('view');
+  var strip = $('strip');
+  var jump = $('jump');
+  var kmOut = $('km');
+  var whereOut = $('where');
+  var liveOut = $('liveOut');
+  var storedOut = $('storedOut');
+  var buildsOut = $('buildsOut');
+  var cardEl = $('card');
+  var detEl = $('det');
+  var leftBtn = $('leftBtn');
+  var rightBtn = $('rightBtn');
+
+  var ctx = view.getContext('2d');
+  var sctx = strip.getContext('2d');
+
+  var stream = null;
+  var pos = 250;          // где игрок, в метрах
+  var depth = 0;          // на какой глубине он стоит, в метрах
+  var curId = null;       // в какой пещере он сейчас
+  var holding = 0;        // -1, 0 или 1
+  var lastT = 0;
+  var raf = 0;
+  var dirty = true;
+
+  function plural(n, one, few, many) {
+    var n10 = n % 10, n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return one;
+    if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return few;
+    return many;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
+    });
+  }
+
+  // ——— размеры холстов ———
+
+  function sizeCanvas(cv, c2d, vw, vh) {
+    var dpr = window.devicePixelRatio || 1;
+    var w = cv.clientWidth || vw;
+    var k = w / vw;
+    cv.width = Math.round(vw * k * dpr);
+    cv.height = Math.round(vh * k * dpr);
+    c2d.setTransform(k * dpr, 0, 0, k * dpr, 0, 0);
+  }
+
+  function sizeAll() {
+    sizeCanvas(view, ctx, VW, VH);
+    scale = (view.clientWidth || VW) / VW;
+    // полоса внизу низкая и тянется как есть, поэтому её единицы — экранные
+    var dpr = window.devicePixelRatio || 1;
+    var w = strip.clientWidth || VW;
+    var h = strip.clientHeight || 14;
+    strip.width = Math.round(w * dpr);
+    strip.height = Math.round(h * dpr);
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // ——— окно в мир ———
+
+  function camLeft() {
+    var c = pos - VIEW_M / 2;
+    if (c < 0) c = 0;
+    if (c > WORLD_M - VIEW_M) c = WORLD_M - VIEW_M;
+    return c;
+  }
+
+  function sx(m, cam) { return (m - cam) * PX_X; }
+  function sy(d) { return SKY + d * PX_Y; }
+
+  // Пещера рисуется одним контуром: пол снизу, потолок сверху. Пол здесь — та же
+  // floorAt, по которой ходит человечек, поэтому он всегда стоит на нарисованном полу.
+  function caveOutline(cave, cam) {
+    var m, x, y;
+    ctx.beginPath();
+    ctx.moveTo(sx(cave.xa, cam), sy(0));
+    for (m = cave.xa + 1; m < cave.xb; m += 1) {
+      ctx.lineTo(sx(m, cam), sy(floorAt(cave, m)));
+    }
+    ctx.lineTo(sx(cave.xb, cam), sy(0));
+    for (m = cave.xb - 1; m > cave.xa; m -= 1) {
+      ctx.lineTo(sx(m, cam), sy(ceilAt(cave, m)));
+    }
+    ctx.closePath();
+  }
+
+  function drawItem(kind, cave, hall, cam) {
+    var fx = sx(hall.x, cam);
+    var fy = sy(hall.y);                    // пол зала
+    var cy = sy(hall.y - hall.hh);          // потолок зала
+    var half = hall.rx * PX_X;
+    var i, tx;
+
+    if (kind === 'chest') {
+      var w = 7 * PX_X, h = 4 * PX_Y;
+      ctx.fillStyle = C_AMBER;
+      ctx.fillRect(fx - w / 2, fy - h, w, h);
+      ctx.fillStyle = '#8a6534';
+      ctx.fillRect(fx - w / 2, fy - h, w, h * 0.32);
+    } else if (kind === 'lake') {
+      ctx.fillStyle = C_WATER;
+      ctx.beginPath();
+      ctx.ellipse(fx, fy - 1.6, half * 0.65, 3.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'drip') {
+      ctx.fillStyle = C_PALE;
+      for (i = -1; i <= 1; i++) {
+        tx = fx + i * half * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(tx - 2.2, cy);
+        ctx.lineTo(tx + 2.2, cy);
+        ctx.lineTo(tx, cy + 4.2 * PX_Y);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else if (kind === 'shroom') {
+      var sh = 4 * PX_Y;
+      ctx.fillStyle = C_PALE;
+      ctx.fillRect(fx - 1.2, fy - sh, 2.4, sh);
+      ctx.fillStyle = C_AMBER;
+      ctx.beginPath();
+      ctx.ellipse(fx, fy - sh, 4 * PX_X, 2 * PX_Y, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'bones') {
+      ctx.strokeStyle = C_PALE;
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(fx - 4 * PX_X, fy - 1.8);
+      ctx.lineTo(fx + 3.2 * PX_X, fy - 4.6);
+      ctx.moveTo(fx - 3.2 * PX_X, fy - 5.2);
+      ctx.lineTo(fx + 4 * PX_X, fy - 2.6);
+      ctx.stroke();
+    }
+  }
+
+  function drawCave(cave, cam, hot) {
+    caveOutline(cave, cam);
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = hot ? C_RIM_HOT : C_RIM;
+    ctx.lineWidth = hot ? 3 : 2.2;
+    ctx.stroke();
+    ctx.fillStyle = C_HOLE;
+    ctx.fill();
+
+    for (var i = 0; i < cave.halls.length; i++) {
+      var h = cave.halls[i];
+      if (h.item < 0) continue;
+      drawItem(STUFF[h.item].key, cave, h, cam);
+    }
+  }
+
+  function drawGuy(x, yFloor) {
+    ctx.strokeStyle = C_GUY;
+    ctx.fillStyle = C_GUY;
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x, yFloor - 8.6, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x, yFloor - 6.6);
+    ctx.lineTo(x, yFloor - 2.8);
+    ctx.moveTo(x, yFloor - 2.8);
+    ctx.lineTo(x - 2.2, yFloor);
+    ctx.moveTo(x, yFloor - 2.8);
+    ctx.lineTo(x + 2.2, yFloor);
+    ctx.moveTo(x - 2.6, yFloor - 5.5);
+    ctx.lineTo(x + 2.6, yFloor - 5.5);
+    ctx.stroke();
+  }
+
+  // Скобка над посчитанным куском мира и подпись к ней — прямо на картинке,
+  // чтобы стенд читался и как немая гифка, без легенды сбоку.
+  // Кегль подписей растёт, когда окно сжимают под узкую колонку: на телефоне
+  // одиннадцать единиц холста превратились бы в пять нечитаемых пикселей.
+  function labelSize() {
+    var s = 11 / scale;
+    return s > 18 ? 18 : s;
+  }
+
+  function drawLabels(cam, lx0, lx1, n) {
+    var bx0 = Math.max(3, lx0), bx1 = Math.min(VW - 3, lx1);
+    if (bx1 - bx0 < 40) return;
+    var fs = labelSize();
+    var by = fs + 8.5;
+
+    ctx.strokeStyle = '#3a4452';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bx0, by);
+    ctx.lineTo(bx1, by);
+    if (lx0 > 3) { ctx.moveTo(bx0 + 0.5, by); ctx.lineTo(bx0 + 0.5, by + 5); }
+    if (lx1 < VW - 3) { ctx.moveTo(bx1 - 0.5, by); ctx.lineTo(bx1 - 0.5, by + 5); }
+    ctx.stroke();
+
+    ctx.fillStyle = C_LABEL;
+    ctx.font = fs.toFixed(1) + 'px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('посчитано сейчас: ' + n + ' ' + plural(n, 'кусок', 'куска', 'кусков'),
+                 (bx0 + bx1) / 2, fs + 2);
+    ctx.textAlign = 'left';
+  }
+
+  function drawCaveName(cave, cam) {
+    var cx = sx((cave.xa + cave.xb) / 2, cam);
+    if (cx < 40) cx = 40;
+    if (cx > VW - 40) cx = VW - 40;
+    ctx.fillStyle = C_RIM_HOT;
+    ctx.font = (labelSize() + 1).toFixed(1) + 'px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(cave.name, cx, SKY - 6);
+    ctx.textAlign = 'left';
+  }
+
+  function drawView() {
+    var cam = camLeft();
+    var lit = stream.liveIndexes();
+    var lo = lit[0], hi = lit[lit.length - 1];
+    var i, ch;
+
+    // небо и непосчитанная пустота
+    ctx.fillStyle = C_SKY;
+    ctx.fillRect(0, 0, VW, SKY);
+    ctx.fillStyle = C_VOID;
+    ctx.fillRect(0, SKY, VW, VH - SKY);
+
+    // еле заметный горизонт там, где ничего не посчитано
+    ctx.fillStyle = '#1a1f27';
+    ctx.fillRect(0, SKY, VW, 1);
+
+    // посчитанная порода
+    var lx0 = sx(lo * CHUNK_M, cam);
+    var lx1 = sx((hi + 1) * CHUNK_M, cam);
+    var rx0 = Math.max(0, lx0), rx1 = Math.min(VW, lx1);
+    if (rx1 > rx0) {
+      // порода к низу темнеет — иначе она читается как плоская плита
+      var rg = ctx.createLinearGradient(0, SKY, 0, VH);
+      rg.addColorStop(0, C_ROCK);
+      rg.addColorStop(1, '#1a202a');
+      ctx.fillStyle = rg;
+      ctx.fillRect(rx0, SKY, rx1 - rx0, VH - SKY);
+      ctx.fillStyle = C_SOIL;
+      ctx.fillRect(rx0, SKY, rx1 - rx0, 4);
+      ctx.fillStyle = C_EDGE;
+      ctx.fillRect(rx0, SKY, rx1 - rx0, 1.5);
+
+      // границы кусков внутри посчитанного — видно, что кусков ровно три
+      ctx.fillStyle = C_DIVIDER;
+      for (i = lo + 1; i <= hi; i++) {
+        var dx = sx(i * CHUNK_M, cam);
+        if (dx > 0 && dx < VW) ctx.fillRect(dx, SKY + 3, 1, VH - SKY - 3);
+      }
+    }
+
+    // пещеры — только из посчитанных кусков
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, SKY, VW, VH - SKY);
+    ctx.clip();
+    for (i = 0; i < lit.length; i++) {
+      ch = stream.liveChunk(lit[i]);
+      if (!ch || !ch.cave) continue;
+      if (sx(ch.cave.xb, cam) < -6 || sx(ch.cave.xa, cam) > VW + 6) continue;
+      drawCave(ch.cave, cam, ch.cave.id === curId);
+    }
+    ctx.restore();
+
+    // игрок стоит ровно на том полу, который нарисован
+    drawGuy(sx(pos, cam), sy(depth));
+
+    drawLabels(cam, lx0, lx1, lit.length);
+    if (curId !== null) {
+      ch = stream.liveChunk(curId);
+      if (ch && ch.cave) drawCaveName(ch.cave, cam);
+    }
+  }
+
+  // ——— полоса всего мира ———
+
+  function drawStrip() {
+    var w = strip.clientWidth || VW;
+    var h = strip.clientHeight || 14;
+    var cw = w / CHUNK_COUNT;
+    var i, x;
+
+    sctx.clearRect(0, 0, w, h);
+    sctx.fillStyle = '#14181f';
+    sctx.fillRect(0, 0, w, h);
+
+    sctx.fillStyle = C_ROCK;
+    for (i = 0; i < CHUNK_COUNT; i++) {
+      if (!stream.seenAt(i)) continue;
+      x = i * cw;
+      sctx.fillRect(Math.floor(x), 0, Math.max(1, Math.ceil(cw)), h);
+    }
+
+    var lit = stream.liveIndexes();
+    sctx.fillStyle = C_RIM_HOT;
+    for (i = 0; i < lit.length; i++) {
+      x = lit[i] * cw;
+      sctx.fillRect(Math.floor(x), 0, Math.max(2, Math.ceil(cw)), h);
+    }
+
+    sctx.fillStyle = C_GUY;
+    sctx.fillRect(Math.floor(pos / WORLD_M * (w - 2)), 0, 2, h);
+  }
+
+  // ——— подписи ———
+
+  function renderHud() {
+    kmOut.textContent = (pos / 1000).toFixed(1);
+    whereOut.textContent = curId === null ? 'наверху' : 'внизу, в проходе';
+    var lc = stream.liveCount(), sc = stream.storedCount(), bc = stream.buildCount();
+    liveOut.textContent = lc + ' ' + plural(lc, 'кусок', 'куска', 'кусков');
+    storedOut.textContent = sc + ' ' + plural(sc, 'кусок', 'куска', 'кусков');
+    buildsOut.textContent = bc + ' ' + plural(bc, 'раз', 'раза', 'раз');
+  }
+
+  function renderCard() {
+    var ci = chunkIndexOf(pos);
+    var ch = stream.liveChunk(ci);
+    var cave = ch ? ch.cave : null;
+
+    if (!cave) {
+      cardEl.className = 'card empty';
+      cardEl.textContent = 'В этом куске мира пещеры нет — сплошной камень.';
+      return;
+    }
+    if (curId === null) {
+      cardEl.className = 'card empty';
+      cardEl.textContent = 'Пещера рядом. Дойди до неё — покажу, что внутри.';
+      return;
+    }
+
+    var names = [], seenName = {};
+    for (var i = 0; i < cave.halls.length; i++) {
+      var it = cave.halls[i].item;
+      if (it < 0 || seenName[it]) continue;
+      seenName[it] = true;
+      names.push(STUFF[it].name);
+    }
+
+    cardEl.className = 'card';
+    cardEl.innerHTML =
+      '<div class="cname">' + esc(cave.name) + '</div>' +
+      '<div class="crar">кусок ' + cave.id + ' · километр ' + (cave.xa / 1000).toFixed(1) + '</div>' +
+      '<dl class="rows">' +
+        '<dt>залов</dt><dd>' + cave.halls.length + '</dd>' +
+        '<dt>глубина</dt><dd>' + cave.depth + ' м</dd>' +
+        '<dt>внутри</dt><dd>' + (names.length ? esc(names.join(', ')) : 'пусто') + '</dd>' +
+      '</dl>';
+  }
+
+  function renderDet() {
+    var ci = chunkIndexOf(pos);
+    var n = stream.timesAt(ci);
+
+    if (stream.mismatchCount() > 0) {
+      detEl.className = 'determinism mismatch';
+      detEl.textContent = 'Какой-то кусок при пересчёте вышел другим, чем в первый раз.';
+      return;
+    }
+    if (n >= 2) {
+      detEl.className = 'determinism match';
+      detEl.textContent = 'Этот кусок считали ' + n + ' ' + plural(n, 'раз', 'раза', 'раз') +
+        ', и каждый раз он выходил один и тот же — до последнего камня.';
+      return;
+    }
+    detEl.className = 'determinism';
+    detEl.textContent = 'Этот кусок посчитали только сейчас и первый раз. Отойди метров ' +
+      'на триста и вернись — его посчитают заново, и я сверю, что вышло.';
+  }
+
+  // ——— движение ———
+
+  function caveHere() {
+    var ch = stream.liveChunk(chunkIndexOf(pos));
+    return ch ? ch.cave : null;
+  }
+
+  function setPos(m) {
+    if (m < 0) m = 0;
+    if (m > WORLD_M) m = WORLD_M;
+    if (m === pos) return false;
+    pos = m;
+    stream.focus(pos);
+
+    var ch = stream.liveChunk(chunkIndexOf(pos));
+    var cave = ch ? ch.cave : null;
+    depth = cave ? floorAt(cave, pos) : 0;
+
+    var id = depth > 2 ? cave.id : null;
+    if (id !== curId) {
+      curId = id;
+      renderCard();
+    }
+    renderDet();
+    if (jump.value !== String(Math.round(pos))) jump.value = String(Math.round(pos));
+    return true;
+  }
+
+  function invalidate() {
+    dirty = true;
+    request();
+  }
+
+  function request() {
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+
+  function frame(now) {
+    raf = 0;
+    if (holding) {
+      var dt = (now - lastT) / 1000;
+      lastT = now;
+      if (dt > 0.05) dt = 0.05;
+      // шаг вдоль пола, а не вдоль поверхности
+      if (setPos(stepAlongFloor(caveHere(), pos, holding, SPEED * dt))) dirty = true;
+    }
+    if (dirty) {
+      drawView();
+      drawStrip();
+      renderHud();
+      dirty = false;
+    }
+    if (holding) request();
+  }
+
+  function hold(dir) {
+    if (holding === dir) return;
+    holding = dir;
+    lastT = (window.performance && performance.now) ? performance.now() : Date.now();
+    leftBtn.className = dir === -1 ? 'on' : '';
+    rightBtn.className = dir === 1 ? 'on' : '';
+    if (dir) request();
+  }
+
+  function bindHold(btn, dir) {
+    btn.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      hold(dir);
+    });
+    btn.addEventListener('pointerup', function () { hold(0); });
+    btn.addEventListener('pointercancel', function () { hold(0); });
+    btn.addEventListener('pointerleave', function () { hold(0); });
+    // нажатие с клавиатуры: кнопка должна работать и без мыши
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(dir); }
+    });
+    btn.addEventListener('keyup', function (e) {
+      if (e.key === ' ' || e.key === 'Enter') hold(0);
+    });
+  }
+
+  bindHold(leftBtn, -1);
+  bindHold(rightBtn, 1);
+
+  window.addEventListener('blur', function () { hold(0); });
+
+  window.addEventListener('keydown', function (e) {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); hold(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); hold(1); }
+  });
+
+  window.addEventListener('keyup', function (e) {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') hold(0);
+  });
+
+  jump.addEventListener('input', function () {
+    hold(0);
+    if (setPos(Number(jump.value))) invalidate();
+  });
+
+  window.addEventListener('resize', function () {
+    sizeAll();
+    invalidate();
+  });
+
+  // ——— число мира ———
+
+  function reseed(text, snap) {
+    seedInput.value = text;
+    stream = makeStream(text);
+    curId = null;
+    depth = 0;
+    var at = pos;
+    // на первом кадре игрок должен стоять наверху, иначе картинку не прочесть.
+    // Ищем ближайшее место вне пещеры, не трогая счётчиков.
+    if (snap) {
+      for (var guard = 0; guard < 80; guard++) {
+        var probe = buildCave(stream.seed, chunkIndexOf(at));
+        if (!probe || at <= probe.xa || at >= probe.xb) break;
+        at += 5;
+      }
+    }
+    pos = -1;
+    setPos(at);
+    renderCard();
+    renderDet();
+    invalidate();
+  }
+
+  $('reseedBtn').addEventListener('click', function () {
+    reseed(String(Math.floor(Math.random() * 4294967296)));
+  });
+
+  seedInput.addEventListener('change', function () {
+    var text = seedInput.value;
+    if (text.length === 0) text = '0';
+    reseed(text);
+  });
+
+  seedInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') seedInput.blur();
+  });
+
+  sizeAll();
+  reseed(seedInput.value, true);
+})();
+</script>
+</div>
+</body>
+</html>

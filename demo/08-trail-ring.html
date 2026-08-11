@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Лента за кораблём — это горстка точек, которые ходят по кругу</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #181b21;
+    --panel-2: #1d212a;
+    --line: #2a2f3a;
+    --text: #dde2ea;
+    --dim: #8b94a3;
+    --dim-2: #6d7684;
+    --accent: #7aa2f7;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .demo {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 2.5rem;
+    overflow-wrap: break-word;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    margin: 0 0 0.6rem;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 0.82rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+    margin: 0 0 0.7rem;
+  }
+
+  p { margin: 0 0 0.8rem; }
+  p.lead { color: var(--dim); }
+  p:last-child { margin-bottom: 0; }
+
+  .block {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.9rem;
+    margin-top: 1.1rem;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 6px;
+    background: #0d0f13;
+    touch-action: none;
+  }
+
+  #sky { aspect-ratio: 600 / 280; }
+  #strip { height: 66px; }
+
+  .cap {
+    font-size: 0.8rem;
+    color: var(--dim);
+    margin-top: 0.55rem;
+  }
+
+  .cap b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* ---- ручки ---- */
+
+  .knob { margin-top: 0.75rem; }
+  .knob:first-child { margin-top: 0; }
+
+  .knob .head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--dim);
+    margin-bottom: 0.25rem;
+  }
+
+  .knob .head b {
+    font-family: var(--mono);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 22px;
+    background: transparent;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+  }
+
+  input[type="range"]::-moz-range-track {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+  }
+
+  input[type="range"]:focus { outline: none; }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.85rem;
+  }
+
+  button {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.45rem 0.6rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+
+  button:hover { border-color: var(--accent); }
+  button:active { background: #232833; }
+
+  button.on {
+    background: #23324d;
+    border-color: #35507d;
+    color: #cfdcf7;
+  }
+
+  .row .lbl {
+    font-size: 0.8rem;
+    color: var(--dim);
+    align-self: center;
+    flex: 0 1 auto;
+    min-width: 0;
+    padding-right: 0.1rem;
+  }
+
+  /* ---- строка вывода ---- */
+
+  .sum {
+    margin-top: 1.1rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    font-size: 0.93rem;
+    line-height: 1.5;
+    min-height: 4.2em;
+  }
+
+  .sum.warn { border-left-color: #e0a458; }
+  .sum b {
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+
+  .note {
+    font-size: 0.85rem;
+    color: var(--dim);
+    margin-top: 0.7rem;
+  }
+
+  .note b {
+    font-weight: 500;
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+<div class="demo">
+
+  <h1>Лента за кораблём — это горстка точек, которые ходят по кругу</h1>
+  <p class="lead">Сверху то, что видит игрок. Снизу — все места, в которых эта лента вообще
+  хранится. Их пересчитываемое число, и когда они кончаются, самое старое переписывается.</p>
+
+  <div class="block">
+    <h2>Что видит игрок</h2>
+    <canvas id="sky"></canvas>
+    <p class="cap">Наведи мышь — корабль полетит за курсором. Убери — вернётся на свою петлю.</p>
+  </div>
+
+  <div class="block">
+    <h2>Что лежит в памяти</h2>
+    <canvas id="strip"></canvas>
+    <p class="cap" id="stripCap">&nbsp;</p>
+  </div>
+
+  <div class="block">
+    <h2>Ручки</h2>
+
+    <div class="knob">
+      <div class="head"><span>Длина ленты</span><b id="vLen">8.0</b></div>
+      <input type="range" id="sLen" min="1" max="14" step="0.5" value="8">
+    </div>
+
+    <div class="knob">
+      <div class="head"><span>Сколько мест в памяти</span><b id="vCap">24</b></div>
+      <input type="range" id="sCap" min="0" max="6" step="1" value="5">
+    </div>
+
+    <div class="knob">
+      <div class="head"><span>Сколько живёт точка</span><b id="vLife">2.0 с</b></div>
+      <input type="range" id="sLife" min="0.2" max="6" step="0.1" value="2">
+    </div>
+
+    <div class="knob">
+      <div class="head"><span>Скорость корабля</span><b id="vSpd">6.0</b></div>
+      <input type="range" id="sSpd" min="0" max="14" step="0.5" value="6">
+    </div>
+
+    <div class="row">
+      <span class="lbl">Сглаживание</span>
+      <button id="b1">ломаная</button>
+      <button id="b2">2</button>
+      <button id="b4">4</button>
+    </div>
+
+    <div class="row">
+      <button id="bJump">Мигнуть</button>
+      <button id="bPause">Пауза</button>
+    </div>
+  </div>
+
+  <div class="sum" id="sum">&nbsp;</div>
+
+  <p class="note"><b>Точка ложится не по часам, а по пути</b> — раз в столько-то пройденного
+  расстояния. Поэтому стоящий корабль не копит точек вовсе, а у летящего лента всегда одной
+  длины, как быстро он бы ни шёл.</p>
+
+  <p class="note"><b>Мест ровно столько, сколько клеток внизу.</b> Кончились — голова
+  возвращается в начало и пишет поверх самого старого. Ничего не удаляется и не сдвигается:
+  старое просто перестаёт быть частью ленты.</p>
+
+  <p class="note"><b>Лента кончается на самом корабле</b>, а не на последней точке. Иначе между
+  точками нос стоял бы на месте и лента дёргалась бы рывками.</p>
+
+  <p class="note"><b>Мигни</b> — и лента оборвётся. Прыжок дальше, чем корабль мог пройти своим
+  ходом, считается перестановкой, и лента начинается заново: соединять её нечем — прямая
+  прочертилась бы через всё, что между.</p>
+
+<script>
+// ==== МАТЕМАТИКА (зеркало кода игры) ====
+// Всё ниже до конца блока — перенос из Assets/Scripts/Trails: TrailRing, TrailSpline,
+// TrailSampleJob и вершинной части TrailRibbon.shader. Меняешь здесь — расходится с игрой.
+
+var JUMP_STEPS = 4;
+
+function clamp01(x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// TrailRing.SampleStep: набранное кольцо растягивается ровно на length.
+function sampleStep(length, capacity) {
+  return length / (capacity > 1 ? capacity - 1 : 1);
+}
+
+function ringNext(head, capacity) {
+  return head + 1 === capacity ? 0 : head + 1;
+}
+
+function ringBack(head, back, capacity) {
+  var i = (head - back) % capacity;
+  return i < 0 ? i + capacity : i;
+}
+
+// TrailRing.IsJump: кадровый ход против того, сколько объект прошёл бы СВОЕЙ скоростью за
+// эту же дельту. Ниже шага фиксации порог не опускается.
+function isJump(step, walked, length, capacity) {
+  return step > JUMP_STEPS * Math.max(walked, sampleStep(length, capacity));
+}
+
+// TrailRing.Param: доля вдоль ленты, 0 у головы и 1 на хвосте. Живой сегмент входит своей
+// дробной длиной, иначе профиль пульсирует с частотой фиксаций.
+function param(seg, t, drawn, liveFrac) {
+  if (drawn < 1) return 0;
+  var s = seg + t * (seg === drawn - 1 ? liveFrac : 1);
+  var eff = Math.max(drawn - 1 + liveFrac, 1e-4);
+  return clamp01(1 - s / eff);
+}
+
+// TrailSpline.CatmullRom и её производная.
+function catmullRom(p0, p1, p2, p3, t) {
+  var t2 = t * t, t3 = t2 * t;
+  return 0.5 * ((2 * p1) + (-p0 + p2) * t
+    + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2
+    + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+}
+
+function catmullRomTangent(p0, p1, p2, p3, t) {
+  var t2 = t * t;
+  return 0.5 * ((-p0 + p2)
+    + 2 * (2 * p0 - 5 * p1 + 4 * p2 - p3) * t
+    + 3 * (-p0 + 3 * p1 - 3 * p2 + p3) * t2);
+}
+
+// MiterDir из шейдера: касательная на зноте линейного режима.
+function miterDir(ax, ay, bx, by) {
+  var la = ax * ax + ay * ay, lb = bx * bx + by * by;
+  var dax = 0, day = 0, dbx = 0, dby = 0;
+  if (la >= 1e-12) { var l = Math.sqrt(la); dax = ax / l; day = ay / l; }
+  if (lb >= 1e-12) { var m = Math.sqrt(lb); dbx = bx / m; dby = by / m; }
+  var sx = dax + dbx, sy = day + dby;
+  if (sx * sx + sy * sy < 1e-8) return [dbx, dby];
+  return [sx, sy];
+}
+
+// Кольцо одного следа. Смена ёмкости заводит его заново: истории у точек другой длины нет.
+function makeTrail(capacity) {
+  var pts = new Array(capacity);
+  for (var i = 0; i < capacity; i++) pts[i] = { x: 0, y: 0, birth: -1e9 };
+  return {
+    cap: capacity, pts: pts, head: 0, count: 0,
+    lastX: 0, lastY: 0, prevX: 0, prevY: 0,
+    speed: 0, liveFrac: 0, headX: 0, headY: 0,
+    jumpedNow: false, lastFrameStep: 0, lastAllowed: 0
+  };
+}
+
+// TrailSampleJob.Execute целиком: решает, пора ли зафиксировать новую точку.
+function sampleTick(tr, x, y, dt, now, length) {
+  var cap = tr.cap;
+  tr.headX = x; tr.headY = y;
+
+  var fresh = tr.count === 0;
+  var dx = tr.prevX - x, dy = tr.prevY - y;
+  var frameStep = Math.sqrt(dx * dx + dy * dy);
+  var allowed = JUMP_STEPS * Math.max(tr.speed * dt, sampleStep(length, cap));
+  var jumped = !fresh && isJump(frameStep, tr.speed * dt, length, cap);
+
+  tr.jumpedNow = jumped;
+  tr.lastFrameStep = frameStep;
+  tr.lastAllowed = allowed;
+
+  if (jumped) tr.count = 0;
+  var restart = fresh || jumped;
+
+  // Скорость набирается только ХОДОМ: перестановка порог не двигает.
+  if (!restart && dt > 0) tr.speed = frameStep / dt;
+  tr.prevX = x; tr.prevY = y;
+
+  var ax = tr.lastX - x, ay = tr.lastY - y;
+  var step = Math.sqrt(ax * ax + ay * ay);
+  var ss = sampleStep(length, cap);
+
+  var committed = restart || step >= ss;
+  tr.liveFrac = committed ? 0 : clamp01(step / ss);
+
+  if (committed) {
+    tr.head = restart ? 0 : ringNext(tr.head, cap);
+    tr.count = Math.min(tr.count + 1, cap);
+    tr.lastX = x; tr.lastY = y;
+    tr.pts[tr.head] = { x: x, y: y, birth: now };
+  }
+  return committed;
+}
+
+// Вершинная часть TrailRibbon.shader: точка на оси ленты, её нормаль, доля вдоль ленты,
+// полуширина и альфа. Кривые затухания — линейный спад по умолчанию, как в OnCreate.
+function ribbonPoint(tr, seg, tc, cfg) {
+  var cap = tr.cap, drawn = cfg.drawn;
+  var live = seg === drawn - 1;
+  var back = drawn - 1 - seg;
+  var g1, g2;
+  if (live) {
+    g1 = tr.pts[tr.head];
+    g2 = { x: tr.headX, y: tr.headY, birth: cfg.now };
+  } else {
+    g1 = tr.pts[ringBack(tr.head, back, cap)];
+    g2 = tr.pts[ringBack(tr.head, back - 1, cap)];
+  }
+
+  var p0 = tr.pts[ringBack(tr.head, Math.min(back + 1, drawn - 1), cap)];
+  var p3 = back < 2
+    ? { x: tr.headX, y: tr.headY }
+    : tr.pts[ringBack(tr.head, back - 2, cap)];
+
+  var px, py, tx, ty;
+  if (cfg.sub > 1) {
+    px = catmullRom(p0.x, g1.x, g2.x, p3.x, tc);
+    py = catmullRom(p0.y, g1.y, g2.y, p3.y, tc);
+    tx = catmullRomTangent(p0.x, g1.x, g2.x, p3.x, tc);
+    ty = catmullRomTangent(p0.y, g1.y, g2.y, p3.y, tc);
+  } else {
+    px = lerp(g1.x, g2.x, tc);
+    py = lerp(g1.y, g2.y, tc);
+    var m = tc < 0.5
+      ? miterDir(g1.x - p0.x, g1.y - p0.y, g2.x - g1.x, g2.y - g1.y)
+      : miterDir(g2.x - g1.x, g2.y - g1.y, p3.x - g2.x, p3.y - g2.y);
+    tx = m[0]; ty = m[1];
+  }
+
+  // Вырожденная касательная — стоящий объект или одинокая точка.
+  if (tx * tx + ty * ty < 1e-12) { tx = g2.x - g1.x; ty = g2.y - g1.y; }
+  if (tx * tx + ty * ty < 1e-12) { tx = g1.x - p0.x; ty = g1.y - p0.y; }
+  var nx = 0, ny = 0;
+  var tl = Math.sqrt(tx * tx + ty * ty);
+  if (tl >= 1e-6) { nx = -ty / tl; ny = tx / tl; }
+
+  var u = param(seg, tc, drawn, clamp01(tr.liveFrac));
+  var birth = lerp(g1.birth, g2.birth, tc);
+  var age = clamp01((cfg.now - birth) / Math.max(cfg.lifetime, 1e-4));
+  var expiry = clamp01(1 - age);
+
+  return {
+    x: px, y: py, nx: nx, ny: ny, u: u,
+    halfW: cfg.headW * (1 - u),        // кривая ширины
+    alpha: (1 - u) * expiry            // кривая альфы, умноженная на истечение
+  };
+}
+// ==== КОНЕЦ МАТЕМАТИКИ ====
+
+(function () {
+  var CAPS = [4, 6, 8, 12, 16, 24, 32];
+  var WORLD_W = 26;        // мировых единиц по ширине холста
+  var RIBBON_W = 0.5;      // полная ширина ленты у головы, мировых единиц
+  var LOOP_A = 9.2, LOOP_B = 7.0;
+
+  var st = {
+    length: 8, capIdx: 5, lifetime: 2, speed: 6, sub: 2,
+    paused: false,
+    now: 0, loopT: 0,
+    shipX: LOOP_A, shipY: 0,
+    mouse: null, hoverCell: -1,
+    flash: null
+  };
+
+  var tr = makeTrail(CAPS[st.capIdx]);
+  tr.shipInit = false;
+
+  var sky = document.getElementById('sky');
+  var strip = document.getElementById('strip');
+  var sctx = sky.getContext('2d');
+  var tctx = strip.getContext('2d');
+
+  var el = {
+    vLen: document.getElementById('vLen'), sLen: document.getElementById('sLen'),
+    vCap: document.getElementById('vCap'), sCap: document.getElementById('sCap'),
+    vLife: document.getElementById('vLife'), sLife: document.getElementById('sLife'),
+    vSpd: document.getElementById('vSpd'), sSpd: document.getElementById('sSpd'),
+    b1: document.getElementById('b1'), b2: document.getElementById('b2'),
+    b4: document.getElementById('b4'),
+    bJump: document.getElementById('bJump'), bPause: document.getElementById('bPause'),
+    sum: document.getElementById('sum'), stripCap: document.getElementById('stripCap')
+  };
+
+  // ---- размеры холстов ----
+
+  var skyW = 0, skyH = 0, stW = 0, stH = 0, scale = 1;
+
+  function fit(cv, ctx, cssH) {
+    var dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    var w = Math.max(1, Math.round(cv.clientWidth));
+    var h = Math.max(1, Math.round(cssH || cv.clientHeight));
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return [w, h];
+  }
+
+  function resize() {
+    var a = fit(sky, sctx, sky.clientHeight);
+    skyW = a[0]; skyH = a[1];
+    var b = fit(strip, tctx, 66);
+    stW = b[0]; stH = b[1];
+    scale = skyW / WORLD_W;
+  }
+
+  function wx(x) { return skyW * 0.5 + x * scale; }
+  function wy(y) { return skyH * 0.5 - y * scale; }
+
+  // ---- петля ----
+
+  function loopPos(t) {
+    return { x: LOOP_A * Math.cos(t), y: LOOP_B * Math.sin(2 * t) * 0.5 };
+  }
+
+  function loopParamSpeed(t) {
+    var dx = -LOOP_A * Math.sin(t);
+    var dy = LOOP_B * Math.cos(2 * t);
+    return Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
+  }
+
+  function reanchorLoop() {
+    var best = 0, bd = Infinity;
+    for (var i = 0; i < 256; i++) {
+      var t = i / 256 * Math.PI * 2;
+      var p = loopPos(t);
+      var d = (p.x - st.shipX) * (p.x - st.shipX) + (p.y - st.shipY) * (p.y - st.shipY);
+      if (d < bd) { bd = d; best = t; }
+    }
+    st.loopT = best;
+  }
+
+  // ---- шаг ----
+
+  var pendingJump = null;
+
+  function step(dt) {
+    st.now += dt;
+
+    if (pendingJump) {
+      st.shipX = pendingJump.x; st.shipY = pendingJump.y;
+      pendingJump = null;
+      reanchorLoop();
+    } else {
+      var tgt;
+      if (st.mouse) {
+        tgt = st.mouse;
+      } else {
+        st.loopT += (st.speed * dt) / loopParamSpeed(st.loopT);
+        tgt = loopPos(st.loopT);
+      }
+      var dx = tgt.x - st.shipX, dy = tgt.y - st.shipY;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      var max = st.speed * dt;
+      if (d > 1e-9 && max > 0) {
+        var k = Math.min(1, max / d);
+        st.shipX += dx * k;
+        st.shipY += dy * k;
+      }
+    }
+
+    if (!tr.shipInit) {
+      tr.prevX = st.shipX; tr.prevY = st.shipY;
+      tr.lastX = st.shipX; tr.lastY = st.shipY;
+      tr.shipInit = true;
+    }
+
+    sampleTick(tr, st.shipX, st.shipY, dt, st.now, st.length);
+
+    if (tr.jumpedNow) {
+      st.flash = {
+        until: st.now + 2.6,
+        text: 'Прыжок <b>' + tr.lastFrameStep.toFixed(1) + '</b> при позволенных <b>'
+          + tr.lastAllowed.toFixed(2) + '</b> — это перестановка, а не ход. '
+          + 'Лента начата заново с нового места.'
+      };
+    }
+  }
+
+  // ---- рисование ленты ----
+
+  function drawSky() {
+    sctx.clearRect(0, 0, skyW, skyH);
+
+    // призрак петли
+    sctx.strokeStyle = 'rgba(109,118,132,0.22)';
+    sctx.lineWidth = 1;
+    sctx.beginPath();
+    for (var i = 0; i <= 240; i++) {
+      var p = loopPos(i / 240 * Math.PI * 2);
+      if (i === 0) sctx.moveTo(wx(p.x), wy(p.y)); else sctx.lineTo(wx(p.x), wy(p.y));
+    }
+    sctx.stroke();
+
+    var drawn = tr.count;
+    if (drawn >= 1) {
+      var cfg = {
+        drawn: drawn, sub: st.sub, now: st.now,
+        lifetime: st.lifetime, headW: RIBBON_W * 0.5
+      };
+
+      for (var seg = 0; seg < drawn; seg++) {
+        for (var sub = 0; sub < st.sub; sub++) {
+          var a = ribbonPoint(tr, seg, sub / st.sub, cfg);
+          var b = ribbonPoint(tr, seg, (sub + 1) / st.sub, cfg);
+
+          var ax = wx(a.x), ay = wy(a.y), bx = wx(b.x), by = wy(b.y);
+          // Шов между соседними квадами: полупрозрачная заливка оставляет светлую щель,
+          // поэтому дальний край вылезает на пол-пикселя вперёд.
+          var ex = bx - ax, ey = by - ay;
+          var el2 = Math.sqrt(ex * ex + ey * ey);
+          if (el2 > 1e-6) { bx += ex / el2 * 0.6; by += ey / el2 * 0.6; }
+
+          var awp = a.halfW * scale, bwp = b.halfW * scale;
+          var anx = a.nx * awp, any = -a.ny * awp;
+          var bnx = b.nx * bwp, bny = -b.ny * bwp;
+
+          if (awp + bwp < 0.05) continue;
+
+          var g = sctx.createLinearGradient(ax, ay, bx, by);
+          g.addColorStop(0, 'rgba(122,162,247,' + a.alpha.toFixed(4) + ')');
+          g.addColorStop(1, 'rgba(122,162,247,' + b.alpha.toFixed(4) + ')');
+
+          sctx.beginPath();
+          sctx.moveTo(ax + anx, ay + any);
+          sctx.lineTo(bx + bnx, by + bny);
+          sctx.lineTo(bx - bnx, by - bny);
+          sctx.lineTo(ax - anx, ay - any);
+          sctx.closePath();
+          sctx.fillStyle = g;
+          sctx.fill();
+        }
+      }
+
+      // сами точки
+      for (var back = 0; back < drawn; back++) {
+        var idx = ringBack(tr.head, back, tr.cap);
+        var pt = tr.pts[idx];
+        var u = param(drawn - 1 - back, 0, drawn, clamp01(tr.liveFrac));
+        var age = clamp01((st.now - pt.birth) / Math.max(st.lifetime, 1e-4));
+        var al = clamp01(1 - age) * (1 - u * 0.75);
+        var hot = st.hoverCell === idx;
+        sctx.beginPath();
+        sctx.arc(wx(pt.x), wy(pt.y), hot ? 4.5 : 2, 0, Math.PI * 2);
+        sctx.fillStyle = hot ? '#ffd479' : 'rgba(207,220,247,' + (al * 0.85).toFixed(3) + ')';
+        sctx.fill();
+        if (hot) {
+          sctx.beginPath();
+          sctx.arc(wx(pt.x), wy(pt.y), 9, 0, Math.PI * 2);
+          sctx.strokeStyle = '#ffd479';
+          sctx.lineWidth = 1.5;
+          sctx.stroke();
+        }
+      }
+    }
+
+    // корабль
+    sctx.beginPath();
+    sctx.arc(wx(st.shipX), wy(st.shipY), 4.5, 0, Math.PI * 2);
+    sctx.fillStyle = '#eef2f8';
+    sctx.fill();
+  }
+
+  // ---- рисование полосы памяти ----
+
+  var cellGeom = [];
+
+  function drawStrip() {
+    tctx.clearRect(0, 0, stW, stH);
+    cellGeom.length = 0;
+
+    var cap = tr.cap;
+    var pad = 4, gap = cap > 16 ? 2 : 3;
+    var cw = Math.max(3, Math.floor((stW - pad * 2 - gap * (cap - 1)) / cap));
+    var used = cw * cap + gap * (cap - 1);
+    var x0 = Math.round((stW - used) / 2);
+    var top = 22, ch = stH - top - 10;
+
+    var drawn = tr.count;
+    var uOf = {};
+    for (var back = 0; back < drawn; back++) {
+      uOf[ringBack(tr.head, back, cap)] = param(drawn - 1 - back, 0, drawn, clamp01(tr.liveFrac));
+    }
+
+    for (var i = 0; i < cap; i++) {
+      var x = x0 + i * (cw + gap);
+      cellGeom.push({ x: x, w: cw, i: i });
+
+      var inRibbon = uOf.hasOwnProperty(i);
+      tctx.beginPath();
+      tctx.rect(x + 0.5, top + 0.5, cw - 1, ch - 1);
+
+      if (inRibbon) {
+        var pt = tr.pts[i];
+        var age = clamp01((st.now - pt.birth) / Math.max(st.lifetime, 1e-4));
+        var al = clamp01(1 - age) * (1 - uOf[i]);
+        tctx.fillStyle = 'rgba(122,162,247,' + Math.max(0.06, al).toFixed(3) + ')';
+        tctx.fill();
+        tctx.strokeStyle = 'rgba(122,162,247,0.45)';
+      } else {
+        tctx.fillStyle = 'rgba(29,33,42,0.7)';
+        tctx.fill();
+        tctx.strokeStyle = 'rgba(42,47,58,1)';
+      }
+      tctx.lineWidth = 1;
+      tctx.stroke();
+
+      if (st.hoverCell === i) {
+        tctx.strokeStyle = '#ffd479';
+        tctx.lineWidth = 1.5;
+        tctx.strokeRect(x + 0.5, top + 0.5, cw - 1, ch - 1);
+      }
+    }
+
+    // голова
+    if (drawn >= 1) {
+      var hx = x0 + tr.head * (cw + gap) + cw / 2;
+      tctx.beginPath();
+      tctx.moveTo(hx, top - 4);
+      tctx.lineTo(hx - 5, top - 13);
+      tctx.lineTo(hx + 5, top - 13);
+      tctx.closePath();
+      tctx.fillStyle = '#eef2f8';
+      tctx.fill();
+    }
+  }
+
+  // ---- строка ----
+
+  function fmt(x, n) { return x.toFixed(n === undefined ? 1 : n).replace('.', ','); }
+
+  // Строки перекладываются в DOM только когда они изменились: иначе это innerHTML
+  // шестьдесят раз в секунду на пустом месте.
+  var lastSum = null, lastSumCls = null, lastCap = null;
+  function say(node, cls, html) {
+    if (node === el.sum) {
+      if (html === lastSum && cls === lastSumCls) return;
+      lastSum = html; lastSumCls = cls;
+      node.className = cls;
+    } else {
+      if (html === lastCap) return;
+      lastCap = html;
+    }
+    node.innerHTML = html;
+  }
+
+  function updateSum() {
+    if (st.flash && st.now < st.flash.until) {
+      say(el.sum, 'sum warn', st.flash.text);
+      return;
+    }
+
+    var ss = sampleStep(st.length, tr.cap);
+    var v = tr.speed;
+
+    if (v < 0.05) {
+      say(el.sum, 'sum', 'Шаг <b>' + fmt(ss, 2) + '</b>. Корабль стоит. Точка ставится по '
+        + 'пройденному пути, поэтому новых нет вовсе — старые гаснут сами и лента тает.');
+      return;
+    }
+
+    var perSec = v / ss;
+    var onScreen = Math.min(st.length, v * st.lifetime);
+    var txt = 'Шаг <b>' + fmt(ss, 2) + '</b>. Корабль идёт <b>' + fmt(v)
+      + '</b> в секунду — точка ложится <b>' + fmt(perSec, 0) + '</b> раз в секунду. '
+      + 'Полное кольцо это <b>' + fmt(st.length) + '</b>';
+
+    if (onScreen < st.length - 0.05) {
+      txt += ', но точка живёт <b>' + fmt(st.lifetime) + '</b> с, поэтому на экране <b>'
+        + fmt(onScreen) + '</b>, а не <b>' + fmt(st.length) + '</b>.';
+    } else {
+      txt += ', и корабль успевает его набрать целиком.';
+    }
+    say(el.sum, 'sum', txt);
+  }
+
+  function updateCap() {
+    say(el.stripCap, 'cap', 'Голова на месте <b>' + (tr.head + 1) + '</b> из <b>' + tr.cap
+      + '</b>. Занято <b>' + tr.count + '</b>.');
+  }
+
+  // ---- ручки ----
+
+  function syncLabels() {
+    el.vLen.textContent = fmt(st.length);
+    el.vCap.textContent = String(CAPS[st.capIdx]);
+    el.vLife.textContent = fmt(st.lifetime) + ' с';
+    el.vSpd.textContent = fmt(st.speed);
+    el.b1.className = st.sub === 1 ? 'on' : '';
+    el.b2.className = st.sub === 2 ? 'on' : '';
+    el.b4.className = st.sub === 4 ? 'on' : '';
+    el.bPause.className = st.paused ? 'on' : '';
+    el.bPause.textContent = st.paused ? 'Идём' : 'Пауза';
+  }
+
+  el.sLen.addEventListener('input', function () {
+    st.length = parseFloat(el.sLen.value); syncLabels();
+  });
+
+  el.sCap.addEventListener('input', function () {
+    var idx = parseInt(el.sCap.value, 10);
+    if (idx === st.capIdx) return;
+    st.capIdx = idx;
+    // Смена ёмкости заводит кольцо заново — как переаллокация арены в игре.
+    var sx = st.shipX, sy = st.shipY;
+    tr = makeTrail(CAPS[idx]);
+    tr.shipInit = true;
+    tr.prevX = sx; tr.prevY = sy; tr.lastX = sx; tr.lastY = sy;
+    tr.headX = sx; tr.headY = sy;
+    st.hoverCell = -1;
+    syncLabels();
+  });
+
+  el.sLife.addEventListener('input', function () {
+    st.lifetime = parseFloat(el.sLife.value); syncLabels();
+  });
+
+  el.sSpd.addEventListener('input', function () {
+    st.speed = parseFloat(el.sSpd.value); syncLabels();
+  });
+
+  el.b1.addEventListener('click', function () { st.sub = 1; syncLabels(); });
+  el.b2.addEventListener('click', function () { st.sub = 2; syncLabels(); });
+  el.b4.addEventListener('click', function () { st.sub = 4; syncLabels(); });
+
+  el.bJump.addEventListener('click', function () {
+    var ang = Math.random() * Math.PI * 2;
+    var r = 5 + Math.random() * 5;
+    pendingJump = {
+      x: Math.max(-11, Math.min(11, Math.cos(ang) * r)),
+      y: Math.max(-4.6, Math.min(4.6, Math.sin(ang) * r * 0.5))
+    };
+    if (st.paused) { st.paused = false; syncLabels(); }
+  });
+
+  el.bPause.addEventListener('click', function () {
+    st.paused = !st.paused; syncLabels();
+  });
+
+  // ---- мышь ----
+
+  function skyPoint(ev) {
+    var r = sky.getBoundingClientRect();
+    var px = (ev.clientX - r.left), py = (ev.clientY - r.top);
+    return { x: (px - r.width * 0.5) / (r.width / WORLD_W),
+             y: (r.height * 0.5 - py) / (r.width / WORLD_W) };
+  }
+
+  function dropMouse() {
+    if (st.mouse) { st.mouse = null; reanchorLoop(); }
+  }
+
+  sky.addEventListener('pointermove', function (ev) {
+    if (ev.pointerType === 'touch' && !ev.isPrimary) return;
+    st.mouse = skyPoint(ev);
+  });
+  sky.addEventListener('pointerdown', function (ev) { st.mouse = skyPoint(ev); });
+  sky.addEventListener('pointerleave', dropMouse);
+  // На тачe pointerleave приходит не всегда — без этого кораблик залипал бы на месте пальца.
+  sky.addEventListener('pointerup', function (ev) {
+    if (ev.pointerType === 'touch') dropMouse();
+  });
+  sky.addEventListener('pointercancel', dropMouse);
+
+  strip.addEventListener('pointermove', function (ev) {
+    var r = strip.getBoundingClientRect();
+    var px = (ev.clientX - r.left) * (stW / r.width);
+    st.hoverCell = -1;
+    for (var i = 0; i < cellGeom.length; i++) {
+      var c = cellGeom[i];
+      if (px >= c.x - 1 && px <= c.x + c.w + 1) { st.hoverCell = c.i; break; }
+    }
+  });
+  strip.addEventListener('pointerleave', function () { st.hoverCell = -1; });
+
+  // ---- цикл ----
+
+  var last = 0;
+  function frame(ts) {
+    if (!last) last = ts;
+    var dt = Math.min(0.05, (ts - last) / 1000);
+    last = ts;
+    // Ширина меняется не только от resize окна: колонка статьи может ужаться сама.
+    if (Math.abs(sky.clientWidth - skyW) > 0.5 || skyH < 2) resize();
+    if (!st.paused || pendingJump) step(dt > 0 ? dt : 1 / 60);
+    drawSky();
+    drawStrip();
+    updateSum();
+    updateCap();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('load', resize);
+  resize();
+  syncLabels();
+  requestAnimationFrame(frame);
+})();
+</script>
+</div>
+</body>
+</html>

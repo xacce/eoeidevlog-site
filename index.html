@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Девлог — интерактивные примеры</title>
+<title>Девлог — Echoes of Exodus</title>
+<meta name="description" content="Девлог космической инкременталки на лоре Echoes of Exodus: выпуски и интерактивные примеры.">
 <style>
   :root {
     --bg: #111318;
@@ -11,21 +12,37 @@
     --line: #2a2f3a;
     --text: #dde2ea;
     --dim: #8b94a3;
+    --dim-2: #6d7684;
     --accent: #7aa2f7;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
+
+  * { box-sizing: border-box; }
+
   body {
     margin: 0;
-    padding: 48px 20px;
+    padding: 48px 20px 64px;
     background: var(--bg);
     color: var(--text);
     font: 16px/1.6 var(--sans);
   }
+
   main { max-width: 640px; margin: 0 auto; }
+
   h1 { font-size: 22px; margin: 0 0 8px; }
-  p.lead { color: var(--dim); margin: 0 0 32px; }
+  p.lead { color: var(--dim); margin: 0 0 36px; }
+
+  h2 {
+    font-size: 13px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin: 36px 0 12px;
+  }
+
   ul { list-style: none; padding: 0; margin: 0; }
   li { margin-bottom: 12px; }
+
   a.card {
     display: block;
     padding: 16px 18px;
@@ -38,12 +55,28 @@
   a.card:hover { border-color: var(--accent); }
   a.card .num { color: var(--dim); font-size: 13px; }
   a.card .name { display: block; margin-top: 4px; color: var(--accent); }
+  a.card .about { display: block; margin-top: 6px; color: var(--dim); font-size: 14px; }
+
+  a.issue .name { font-size: 18px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>Интерактивные примеры к девлогу</h1>
-  <p class="lead">Выпуск 00.</p>
+  <h1>Девлог: космическая инкременталка</h1>
+  <p class="lead">Зонды фон Неймана, версионирование колоний, шумы и трейлы. Лор общий с Echoes of Exodus.</p>
+
+  <h2>Выпуски</h2>
+  <ul>
+    <li>
+      <a class="card issue" href="devlog/01/">
+        <span class="num">01</span>
+        <span class="name">Зачем инкременталка, версии зондов, шумы и трейлы</span>
+        <span class="about">Первый выпуск: о чём игра, как решается проблема брошенных систем, из чего собирается галактика и почему трейлы дорогие.</span>
+      </a>
+    </li>
+  </ul>
+
+  <h2>Интерактивные примеры</h2>
   <ul>
     <li>
       <a class="card" href="demo/01-seed-loot.html">
@@ -55,6 +88,42 @@
       <a class="card" href="demo/02-noise-vs-random.html">
         <span class="num">02</span>
         <span class="name">Шум — это рандом, брошенный реже</span>
+      </a>
+    </li>
+    <li>
+      <a class="card" href="demo/03-coop-same-galaxy.html">
+        <span class="num">03</span>
+        <span class="name">Одна галактика на двоих</span>
+      </a>
+    </li>
+    <li>
+      <a class="card" href="demo/04-caves-on-demand.html">
+        <span class="num">04</span>
+        <span class="name">Пещера на месте, хотя её никто не хранил</span>
+      </a>
+    </li>
+    <li>
+      <a class="card" href="demo/05-layers.html">
+        <span class="num">05</span>
+        <span class="name">Естественность — это сложение масштабов</span>
+      </a>
+    </li>
+    <li>
+      <a class="card" href="demo/06-noise-to-galaxy.html">
+        <span class="num">06</span>
+        <span class="name">Из шума в галактику</span>
+      </a>
+    </li>
+    <li>
+      <a class="card" href="demo/07-package.html">
+        <span class="num">07</span>
+        <span class="name">Собери посылку</span>
+      </a>
+    </li>
+    <li>
+      <a class="card" href="demo/08-trail-ring.html">
+        <span class="num">08</span>
+        <span class="name">Лента за кораблём — это горстка точек, которые ходят по кругу</span>
       </a>
     </li>
   </ul>
