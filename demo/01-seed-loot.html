@@ -7,24 +7,15 @@
 <style>
   :root {
     --bg: #111318;
-    --panel: #181b21;
-    --panel-2: #1d212a;
+    --panel: rgba(24, 27, 33, 0.92);
     --line: #2a2f3a;
     --text: #dde2ea;
     --dim: #8b94a3;
     --dim-2: #6d7684;
     --accent: #7aa2f7;
-    --blood: #b03434;
-    --ghost: #9fdbe8;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-
-  .r0 { --rc: #8b94a3; }
-  .r1 { --rc: #6fae7a; }
-  .r2 { --rc: #5aa9d6; }
-  .r3 { --rc: #a98ad6; }
-  .r4 { --rc: #d8a35c; }
 
   * { box-sizing: border-box; }
 
@@ -35,110 +26,53 @@
     color: var(--text);
     font-family: var(--sans);
     font-size: 15px;
-    line-height: 1.55;
+    line-height: 1.5;
     -webkit-text-size-adjust: 100%;
   }
 
-  .demo {
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 1.5rem 1rem 2.5rem;
-    overflow-wrap: break-word;
-  }
-
-  h1 {
-    font-size: 1.35rem;
-    line-height: 1.3;
-    margin: 0 0 0.6rem;
-    font-weight: 600;
-  }
-
-  p { margin: 0 0 0.8rem; }
-  p.lead { color: var(--dim); }
-
-  .block {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 0.9rem;
-    margin-top: 1.1rem;
-  }
+  body { padding: 0.6rem; }
 
   .hidden { display: none !important; }
 
-  /* ——— сцена ——— */
+  /* ——— окно игры: всё происходит внутри ——— */
 
-  .stage {
-    margin-top: 1.1rem;
+  .game {
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(ellipse 60% 40% at 70% 10%, #171c2a 0%, transparent 60%),
+      linear-gradient(#0b0e15 0%, #10131b 55%, #14171f 100%);
     border: 1px solid var(--line);
-    border-radius: 8px;
-    background: #12151c;
+    border-radius: 10px;
     overflow: hidden;
   }
 
-  .stage svg { display: block; width: 100%; height: auto; max-width: 100%; }
+  /* верхняя панель: числа духа */
 
-  #bossDead, #ghost, #drop1, #drop2 { display: none; }
-  .killed #bossAlive { display: none; }
-  .killed #bossDead { display: block; }
-  .killed #ghost { display: block; animation: rise 0.9s ease-out; }
-  .hasSword1 #drop1 { display: block; }
-  .hasSword2 #drop2 { display: block; }
-  .hasSword1 #drop1 .sw, .hasSword2 #drop2 .sw { animation: plop 0.5s ease-out; }
-
-  #ghostBody { animation: floaty 2.6s ease-in-out infinite; }
-  .flinch #ghostBody { animation: flinch 0.6s ease-out, floaty 2.6s 0.6s ease-in-out infinite; }
-
-  #heroArm { transition: transform 0.4s ease-out; transform-origin: 128px 128px; }
-  .raised #heroArm { transform: rotate(-95deg); }
-
-  @keyframes rise {
-    from { transform: translateY(46px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+  .hud {
+    padding: 0.6rem 0.8rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
-  @keyframes floaty {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-7px); }
-  }
-  @keyframes flinch {
-    0% { transform: translateY(0) rotate(0); }
-    30% { transform: translateY(4px) rotate(7deg); }
-    60% { transform: translateY(-2px) rotate(-5deg); }
-    100% { transform: translateY(0) rotate(0); }
-  }
-  @keyframes plop {
-    0% { transform: translateY(-30px); opacity: 0; }
-    70% { transform: translateY(4px); opacity: 1; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-
-  .p { opacity: 0; }
-  .go .p { animation: fly 0.75s ease-out forwards; }
-  @keyframes fly {
-    0% { transform: translate(0, 0); opacity: 1; }
-    100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
-  }
-
-  /* ——— цепочка чисел ——— */
-
-  .chainwrap { margin-top: 1.1rem; }
 
   .chain {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem 0.35rem;
+    gap: 0.25rem 0.3rem;
     font-family: var(--mono);
   }
 
   .tok {
-    padding: 0.15rem 0.45rem;
+    padding: 0.1rem 0.4rem;
     border: 1px solid var(--line);
     border-radius: 6px;
-    background: var(--bg);
+    background: #10131a;
     color: var(--accent);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     overflow-wrap: anywhere;
   }
 
@@ -147,10 +81,10 @@
 
   @keyframes catch {
     0% { background: #35507d; color: #eaf1ff; }
-    100% { background: var(--bg); color: var(--accent); }
+    100% { background: #10131a; color: var(--accent); }
   }
 
-  .fn { flex: none; width: 2rem; height: 1rem; color: var(--dim); }
+  .fn { flex: none; width: 1.9rem; height: 0.95rem; color: var(--dim); }
   .fn.fresh { animation: wiggle 0.8s ease-out; }
   @keyframes wiggle {
     0% { transform: rotate(0); color: #eaf1ff; }
@@ -160,15 +94,14 @@
   }
 
   .spinnote {
-    margin-top: 0.45rem;
-    font-size: 0.82rem;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
     color: var(--dim);
-    min-height: 1.2em;
   }
 
-  /* полоса отсеков: куда попало число */
+  .spinnote:empty { display: none; }
 
-  .lane { position: relative; margin-top: 0.7rem; }
+  .lane { position: relative; margin-top: 0.55rem; }
 
   .cells {
     display: grid;
@@ -180,7 +113,7 @@
   }
 
   .cells .c {
-    padding: 4px 1px;
+    padding: 3px 1px;
     text-align: center;
     font-size: clamp(7px, 1.6vw, 10px);
     line-height: 1.2;
@@ -211,47 +144,195 @@
   .under {
     display: flex;
     justify-content: space-between;
-    margin-top: 0.2rem;
+    margin-top: 0.15rem;
     font-family: var(--mono);
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     color: var(--dim-2);
   }
 
-  /* ——— карточки лута ——— */
+  /* ——— пузыри в небе над персонажами ——— */
 
-  .cards { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.1rem; }
-
-  .card {
-    flex: 1 1 240px;
-    min-width: 0;
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--rc, var(--line));
-    border-radius: 6px;
-    background: var(--panel-2);
-    padding: 0.7rem 0.8rem;
-    animation: plopcard 0.45s ease-out;
+  .talk {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    padding: 0.9rem 0.9rem 0;
+    min-height: 7.5rem;
+    margin-bottom: -68px; /* пузыри нависают над головами, хвосты достают до говорящих */
+    pointer-events: none;
   }
 
-  @keyframes plopcard {
-    from { transform: translateY(10px); opacity: 0; }
+  .bubble.player { pointer-events: auto; }
+
+  .bubble {
+    position: relative;
+    max-width: min(34rem, 88%);
+    padding: 0.6rem 0.85rem;
+    border-radius: 12px;
+    font-family: var(--sans);
+    font-size: 0.97rem;
+    line-height: 1.45;
+    animation: pop 0.22s ease-out;
+  }
+
+  @keyframes pop {
+    from { transform: translateY(6px) scale(0.97); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  /* дух говорит справа сверху, хвост вниз к нему */
+  .bubble.ghost {
+    align-self: flex-end;
+    background: #16272c;
+    border: 1px solid #2f5c66;
+    color: #d8f0f6;
+  }
+
+  .bubble.ghost::after {
+    content: "";
+    position: absolute;
+    bottom: -9px;
+    right: 14%;
+    border: 9px solid transparent;
+    border-top-color: #2f5c66;
+    border-bottom: none;
+  }
+
+  /* игрок отвечает слева снизу; его пузырь — и есть кнопка */
+  .bubble.player {
+    align-self: flex-start;
+    display: block;
+    text-align: left;
+    background: #1b2537;
+    border: 1px solid #35507d;
+    color: #dbe6fb;
+    cursor: pointer;
+    animation: pop 0.22s ease-out, breathe 2.2s 0.4s ease-in-out infinite;
+  }
+
+  .bubble.player::after {
+    content: "";
+    position: absolute;
+    bottom: -9px;
+    left: 12%;
+    border: 9px solid transparent;
+    border-top-color: #35507d;
+    border-bottom: none;
+  }
+
+  .bubble.player:hover { border-color: var(--accent); background: #20304a; }
+  .bubble.player:active { transform: scale(0.985); }
+
+  .bubble.player .hint {
+    color: var(--accent);
+    font-size: 0.85em;
+    margin-left: 0.35rem;
+  }
+
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(122, 162, 247, 0); }
+    50% { box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.16); }
+  }
+
+  .bubble.player.danger {
+    background: #45201f;
+    border-color: #7d3532;
+    color: #f2c6c2;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .bubble.player.danger::after { border-top-color: #7d3532; }
+  .bubble.player.danger:hover { border-color: #b05450; background: #542725; }
+  .bubble.player.danger .hint { color: #e8938d; }
+
+  /* ——— сцена ——— */
+
+  .scene svg { display: block; width: 100%; height: auto; max-width: 100%; }
+
+  #bossDead, #ghost, #drop1, #drop2 { display: none; }
+  .killed #bossAlive { display: none; }
+  .killed #bossDead { display: block; }
+  .killed #ghost { display: block; animation: rise 0.9s ease-out; }
+  .hasSword1 #drop1 { display: block; }
+  .hasSword2 #drop2 { display: block; }
+  .hasSword1 #drop1 .sw, .hasSword2 #drop2 .sw { animation: plop 0.5s ease-out; }
+
+  #ghostBody { animation: floaty 2.6s ease-in-out infinite; }
+  .flinch #ghostBody { animation: flinch 0.6s ease-out, floaty 2.6s 0.6s ease-in-out infinite; }
+
+  /* центр поворота — плечо, в локальных координатах группы героя */
+  #heroArm { transition: transform 0.4s ease-out; transform-origin: 126px 128px; }
+  .raised #heroArm { transform: rotate(-95deg); }
+
+  @keyframes rise {
+    from { transform: translateY(46px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+  }
+  @keyframes flinch {
+    0% { transform: translateY(0) rotate(0); }
+    30% { transform: translateY(4px) rotate(7deg); }
+    60% { transform: translateY(-2px) rotate(-5deg); }
+    100% { transform: translateY(0) rotate(0); }
+  }
+  @keyframes plop {
+    0% { transform: translateY(-30px); opacity: 0; }
+    70% { transform: translateY(4px); opacity: 1; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .p { opacity: 0; }
+  .go .p { animation: fly 0.75s ease-out forwards; }
+  @keyframes fly {
+    0% { transform: translate(0, 0); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+  }
+
+  /* ——— полка лута внизу окна ——— */
+
+  .loot {
+    padding: 0.7rem 0.8rem 0.9rem;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+  }
+
+  .cards { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+  .card {
+    flex: 1 1 200px;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    background: #171b23;
+    padding: 0.55rem 0.7rem;
+    animation: pop 0.35s ease-out;
+  }
+
+  .card.mini { flex: 0 1 auto; border-left-color: var(--dim-2); }
 
   .cname {
-    font-size: 1.02rem;
+    font-size: 0.98rem;
     font-weight: 600;
-    color: var(--rc, var(--text));
-    margin-bottom: 0.15rem;
+    color: var(--text);
     overflow-wrap: break-word;
   }
 
-  .crar { font-size: 0.78rem; color: var(--dim); margin-bottom: 0.5rem; }
+  .ctag { font-size: 0.75rem; color: var(--dim); margin-top: 0.1rem; }
 
   .rows {
     display: grid;
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-    gap: 0.15rem 0.7rem;
-    font-size: 0.87rem;
+    gap: 0.1rem 0.7rem;
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
   }
 
   .rows dt { color: var(--dim); }
@@ -265,10 +346,10 @@
   .rows dd.reveal { animation: catch 0.9s ease-out; border-radius: 4px; }
 
   .seedline {
-    margin-top: 0.55rem;
-    padding-top: 0.5rem;
+    margin-top: 0.45rem;
+    padding-top: 0.4rem;
     border-top: 1px solid var(--line);
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     color: var(--dim);
   }
 
@@ -280,215 +361,31 @@
   }
 
   .match {
-    margin-top: 0.7rem;
-    padding: 0.5rem 0.6rem;
+    margin-top: 0.55rem;
+    padding: 0.4rem 0.6rem;
     border-left: 2px solid #6fae7a;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     color: #b6d6bc;
   }
 
-  /* ——— диалог ——— */
-
-  .dlg {
-    margin-top: 1.1rem;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--panel);
-    padding: 0.8rem 0.9rem;
-    min-height: 8.2em;
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-    cursor: pointer;
-    user-select: none;
+  .caption {
+    margin-top: 0.55rem;
+    font-size: 0.8rem;
+    color: var(--dim);
   }
 
-  .who {
-    align-self: flex-start;
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-weight: 700;
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-  }
-
-  .who.hero { color: #a9c4fb; border-color: #35507d; background: #1b2537; }
-  .who.ghost { color: #aee7f2; border-color: #2f5c66; background: #16272c; }
-  .who.note { visibility: hidden; }
-
-  .say { font-size: 0.98rem; min-height: 2.9em; }
-  .say.note { color: var(--dim); font-style: italic; }
-
-  .btns { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: auto; }
-
-  button {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 0.5rem 0.8rem;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-
-  button:hover { border-color: var(--accent); }
-  button:active { background: #232833; }
-
-  button.next { color: var(--dim); }
-  button.kill {
-    background: #45201f;
-    border-color: #7d3532;
-    color: #f2c6c2;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-  button.kill:hover { border-color: #b05450; }
-
-  @media (max-width: 380px) {
-    .demo { padding: 1.1rem 0.7rem 2rem; }
-    .say { font-size: 0.93rem; }
+  @media (max-width: 420px) {
+    .bubble { font-size: 0.91rem; max-width: 94%; }
+    .talk { padding: 0.7rem 0.6rem 0.2rem; }
+    .hud, .loot { padding-left: 0.6rem; padding-right: 0.6rem; }
   }
 </style>
 </head>
 <body>
-<div class="demo">
-
-  <h1>Лут из одного числа</h1>
-  <p class="lead">Добейте босса и заберите своё. Всё, что здесь выпадает,
-  по-настоящему вычисляется на этой странице — из одного числа.</p>
-
-  <div class="stage" id="stage">
-    <svg viewBox="0 0 600 230" aria-label="Сцена: герой и босс">
-      <!-- земля -->
-      <rect x="0" y="198" width="600" height="32" fill="#171a20"></rect>
-      <line x1="0" y1="198" x2="600" y2="198" stroke="#2a2f3a" stroke-width="2"></line>
-
-      <!-- герой -->
-      <g id="hero">
-        <rect x="112" y="168" width="10" height="30" rx="4" fill="#2e3a58"></rect>
-        <rect x="128" y="168" width="10" height="30" rx="4" fill="#2e3a58"></rect>
-        <rect x="106" y="116" width="38" height="58" rx="12" fill="#3d4c72" stroke="#5d6f9e" stroke-width="2"></rect>
-        <circle cx="125" cy="98" r="16" fill="#d9c6a5"></circle>
-        <path d="M108 96 a17 17 0 0 1 34 0 l0 -6 a17 12 0 0 0 -34 0 z" fill="#5d6f9e"></path>
-        <rect x="122" y="92" width="6" height="12" rx="2" fill="#5d6f9e"></rect>
-        <circle cx="132" cy="99" r="2" fill="#20242d"></circle>
-        <g id="heroArm">
-          <rect x="126" y="124" width="26" height="9" rx="4" fill="#3d4c72" stroke="#5d6f9e" stroke-width="1.5"></rect>
-          <g transform="translate(150 128) rotate(-38)">
-            <rect x="4" y="-3" width="52" height="6" rx="2" fill="#c8d2e0"></rect>
-            <polygon points="56,-3 66,0 56,3" fill="#c8d2e0"></polygon>
-            <rect x="0" y="-8" width="5" height="16" rx="2" fill="#8a6b3f"></rect>
-            <rect x="-8" y="-3" width="9" height="6" rx="2" fill="#6b4f2a"></rect>
-          </g>
-        </g>
-      </g>
-
-      <!-- упавшие мечи: внешняя группа держит позицию, анимация падения — на внутренней -->
-      <g id="drop1" transform="translate(196 178) rotate(66)">
-        <g class="sw">
-          <rect x="0" y="-2.5" width="42" height="5" rx="2" fill="#c8d2e0"></rect>
-          <polygon points="42,-2.5 50,0 42,2.5" fill="#c8d2e0"></polygon>
-          <rect x="-4" y="-7" width="4" height="14" rx="2" fill="#8a6b3f"></rect>
-          <rect x="-11" y="-2.5" width="8" height="5" rx="2" fill="#6b4f2a"></rect>
-        </g>
-      </g>
-      <g id="drop2" transform="translate(226 176) rotate(74)">
-        <g class="sw">
-          <rect x="0" y="-2.5" width="42" height="5" rx="2" fill="#c8d2e0"></rect>
-          <polygon points="42,-2.5 50,0 42,2.5" fill="#c8d2e0"></polygon>
-          <rect x="-4" y="-7" width="4" height="14" rx="2" fill="#8a6b3f"></rect>
-          <rect x="-11" y="-2.5" width="8" height="5" rx="2" fill="#6b4f2a"></rect>
-        </g>
-      </g>
-
-      <!-- босс живой: жирный тролль, один глаз уже выколот в бою -->
-      <g id="bossAlive">
-        <rect x="408" y="172" width="18" height="26" rx="6" fill="#37543a"></rect>
-        <rect x="446" y="172" width="18" height="26" rx="6" fill="#37543a"></rect>
-        <ellipse cx="436" cy="122" rx="54" ry="60" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2.5"></ellipse>
-        <ellipse cx="436" cy="142" rx="30" ry="26" fill="#5d8a57"></ellipse>
-        <circle cx="436" cy="52" r="27" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2.5"></circle>
-        <polygon points="409,46 397,30 415,38" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2"></polygon>
-        <polygon points="463,46 475,30 457,38" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2"></polygon>
-        <polygon points="424,66 420,76 430,68" fill="#e8e4d5"></polygon>
-        <polygon points="448,66 452,76 442,68" fill="#e8e4d5"></polygon>
-        <circle cx="424" cy="48" r="6" fill="#e8e4d5"></circle>
-        <circle cx="426" cy="49" r="2.6" fill="#20242d"></circle>
-        <line x1="416" y1="41" x2="430" y2="45" stroke="#37543a" stroke-width="3" stroke-linecap="round"></line>
-        <!-- выколотый глаз -->
-        <line x1="443" y1="43" x2="453" y2="53" stroke="#a04040" stroke-width="3.5" stroke-linecap="round"></line>
-        <line x1="453" y1="43" x2="443" y2="53" stroke="#a04040" stroke-width="3.5" stroke-linecap="round"></line>
-        <g transform="translate(492 128) rotate(24)">
-          <rect x="-6" y="-40" width="13" height="58" rx="6" fill="#7a5a34"></rect>
-          <circle cx="0" cy="-44" r="13" fill="#8a6b3f"></circle>
-        </g>
-      </g>
-
-      <!-- босс мёртвый: туша на земле и лужа -->
-      <g id="bossDead">
-        <ellipse cx="452" cy="196" rx="86" ry="12" fill="#5c1f1f" opacity="0.85"></ellipse>
-        <circle cx="530" cy="190" r="5" fill="#7d2626"></circle>
-        <circle cx="368" cy="192" r="4" fill="#7d2626"></circle>
-        <circle cx="392" cy="186" r="3" fill="#7d2626"></circle>
-        <ellipse cx="452" cy="168" rx="60" ry="32" fill="#46683f" stroke="#5d8a57" stroke-width="2.5"></ellipse>
-        <circle cx="384" cy="176" r="24" fill="#46683f" stroke="#5d8a57" stroke-width="2.5"></circle>
-        <polygon points="372,192 366,200 378,196" fill="#e8e4d5"></polygon>
-        <line x1="374" y1="168" x2="384" y2="176" stroke="#20242d" stroke-width="3" stroke-linecap="round"></line>
-        <line x1="384" y1="168" x2="374" y2="176" stroke="#20242d" stroke-width="3" stroke-linecap="round"></line>
-        <line x1="390" y1="168" x2="400" y2="176" stroke="#a04040" stroke-width="3" stroke-linecap="round"></line>
-        <line x1="400" y1="168" x2="390" y2="176" stroke="#a04040" stroke-width="3" stroke-linecap="round"></line>
-        <rect x="382" y="184" width="10" height="8" rx="3" fill="#b06060"></rect>
-      </g>
-
-      <!-- брызги при добивании -->
-      <g id="burst" transform="translate(440 120)">
-        <circle class="p" r="5" fill="#b03434" style="--dx: -60px; --dy: -46px"></circle>
-        <circle class="p" r="4" fill="#c0392b" style="--dx: 44px; --dy: -60px"></circle>
-        <circle class="p" r="6" fill="#8d2828" style="--dx: -34px; --dy: -70px"></circle>
-        <circle class="p" r="3" fill="#c0392b" style="--dx: 66px; --dy: -30px"></circle>
-        <circle class="p" r="5" fill="#b03434" style="--dx: -72px; --dy: -12px"></circle>
-        <circle class="p" r="4" fill="#8d2828" style="--dx: 20px; --dy: -78px"></circle>
-        <circle class="p" r="3" fill="#b03434" style="--dx: 78px; --dy: -52px"></circle>
-        <circle class="p" r="5" fill="#c0392b" style="--dx: -18px; --dy: -84px"></circle>
-        <circle class="p" r="4" fill="#8d2828" style="--dx: 54px; --dy: 8px"></circle>
-        <circle class="p" r="3" fill="#b03434" style="--dx: -50px; --dy: 16px"></circle>
-      </g>
-
-      <!-- дух босса -->
-      <g id="ghost">
-        <g id="ghostBody">
-          <path d="M400 128
-                   a36 40 0 0 1 72 0
-                   l0 26
-                   q -9 12 -18 0 q -9 12 -18 0 q -9 12 -18 0 q -9 12 -18 0
-                   z"
-                fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></path>
-          <circle cx="436" cy="92" r="20" fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></circle>
-          <polygon points="427,104 424,111 431,106" fill="#eef9fc" opacity="0.9"></polygon>
-          <polygon points="445,104 448,111 441,106" fill="#eef9fc" opacity="0.9"></polygon>
-          <circle cx="428" cy="90" r="4" fill="#eef9fc" opacity="0.95"></circle>
-          <line x1="440" y1="86" x2="448" y2="94" stroke="#5c98a6" stroke-width="3" stroke-linecap="round"></line>
-          <line x1="448" y1="86" x2="440" y2="94" stroke="#5c98a6" stroke-width="3" stroke-linecap="round"></line>
-        </g>
-        <g id="gburst" transform="translate(436 110)">
-          <circle class="p" r="4" fill="#9fdbe8" style="--dx: -50px; --dy: -40px"></circle>
-          <circle class="p" r="3" fill="#cdeef5" style="--dx: 44px; --dy: -52px"></circle>
-          <circle class="p" r="5" fill="#9fdbe8" style="--dx: -26px; --dy: -64px"></circle>
-          <circle class="p" r="3" fill="#cdeef5" style="--dx: 60px; --dy: -20px"></circle>
-          <circle class="p" r="4" fill="#9fdbe8" style="--dx: 30px; --dy: -70px"></circle>
-          <circle class="p" r="3" fill="#cdeef5" style="--dx: -62px; --dy: -14px"></circle>
-        </g>
-      </g>
-    </svg>
-  </div>
+<div class="game" id="game">
 
   <!-- числа духа -->
-  <div class="block chainwrap hidden" id="chainBlock">
+  <div class="hud hidden" id="hud">
     <div class="chain" id="chain"></div>
     <div class="spinnote" id="spinNote"></div>
     <div class="lane hidden" id="laneWrap">
@@ -498,15 +395,146 @@
     </div>
   </div>
 
-  <!-- лут -->
-  <div class="cards hidden" id="cards"></div>
-  <div class="match hidden" id="matchLine"></div>
+  <!-- разговор: пузырь духа и пузырь-кнопка игрока -->
+  <div class="talk">
+    <div class="bubble ghost hidden" id="gb"></div>
+    <button type="button" class="bubble player" id="pb"></button>
+  </div>
 
-  <!-- диалог -->
-  <div class="dlg" id="dlg">
-    <span class="who note" id="who">—</span>
-    <div class="say" id="say"></div>
-    <div class="btns" id="btns"></div>
+  <!-- сцена -->
+  <div class="scene" id="stage">
+    <svg viewBox="0 0 1000 260" aria-label="Сцена: герой и босс">
+      <rect x="0" y="213" width="1000" height="47" fill="#171a20"></rect>
+      <line x1="0" y1="213" x2="1000" y2="213" stroke="#2a2f3a" stroke-width="2"></line>
+
+      <!-- сторона героя -->
+      <g transform="translate(60 15)">
+        <g id="hero">
+          <rect x="112" y="168" width="10" height="30" rx="4" fill="#2e3a58"></rect>
+          <rect x="128" y="168" width="10" height="30" rx="4" fill="#2e3a58"></rect>
+          <rect x="106" y="116" width="38" height="58" rx="12" fill="#3d4c72" stroke="#5d6f9e" stroke-width="2"></rect>
+          <circle cx="125" cy="98" r="16" fill="#d9c6a5"></circle>
+          <path d="M108 96 a17 17 0 0 1 34 0 l0 -6 a17 12 0 0 0 -34 0 z" fill="#5d6f9e"></path>
+          <rect x="122" y="92" width="6" height="12" rx="2" fill="#5d6f9e"></rect>
+          <circle cx="132" cy="99" r="2" fill="#20242d"></circle>
+          <g id="heroArm">
+            <rect x="126" y="124" width="26" height="9" rx="4" fill="#3d4c72" stroke="#5d6f9e" stroke-width="1.5"></rect>
+            <g transform="translate(150 128) rotate(-38)">
+              <rect x="4" y="-3" width="52" height="6" rx="2" fill="#c8d2e0"></rect>
+              <polygon points="56,-3 66,0 56,3" fill="#c8d2e0"></polygon>
+              <rect x="0" y="-8" width="5" height="16" rx="2" fill="#8a6b3f"></rect>
+              <rect x="-8" y="-3" width="9" height="6" rx="2" fill="#6b4f2a"></rect>
+            </g>
+          </g>
+        </g>
+
+        <!-- упавшие мечи: внешняя группа держит позицию, анимация падения — на внутренней -->
+        <g id="drop1" transform="translate(196 178) rotate(66)">
+          <g class="sw">
+            <rect x="0" y="-2.5" width="42" height="5" rx="2" fill="#c8d2e0"></rect>
+            <polygon points="42,-2.5 50,0 42,2.5" fill="#c8d2e0"></polygon>
+            <rect x="-4" y="-7" width="4" height="14" rx="2" fill="#8a6b3f"></rect>
+            <rect x="-11" y="-2.5" width="8" height="5" rx="2" fill="#6b4f2a"></rect>
+          </g>
+        </g>
+        <g id="drop2" transform="translate(226 176) rotate(74)">
+          <g class="sw">
+            <rect x="0" y="-2.5" width="42" height="5" rx="2" fill="#c8d2e0"></rect>
+            <polygon points="42,-2.5 50,0 42,2.5" fill="#c8d2e0"></polygon>
+            <rect x="-4" y="-7" width="4" height="14" rx="2" fill="#8a6b3f"></rect>
+            <rect x="-11" y="-2.5" width="8" height="5" rx="2" fill="#6b4f2a"></rect>
+          </g>
+        </g>
+      </g>
+
+      <!-- сторона босса -->
+      <g transform="translate(320 15)">
+        <!-- босс живой: жирный тролль, один глаз уже выколот в бою -->
+        <g id="bossAlive">
+          <rect x="408" y="172" width="18" height="26" rx="6" fill="#37543a"></rect>
+          <rect x="446" y="172" width="18" height="26" rx="6" fill="#37543a"></rect>
+          <ellipse cx="436" cy="122" rx="54" ry="60" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2.5"></ellipse>
+          <ellipse cx="436" cy="142" rx="30" ry="26" fill="#5d8a57"></ellipse>
+          <circle cx="436" cy="52" r="27" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2.5"></circle>
+          <polygon points="409,46 397,30 415,38" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2"></polygon>
+          <polygon points="463,46 475,30 457,38" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2"></polygon>
+          <polygon points="424,66 420,76 430,68" fill="#e8e4d5"></polygon>
+          <polygon points="448,66 452,76 442,68" fill="#e8e4d5"></polygon>
+          <circle cx="424" cy="48" r="6" fill="#e8e4d5"></circle>
+          <circle cx="426" cy="49" r="2.6" fill="#20242d"></circle>
+          <line x1="416" y1="41" x2="430" y2="45" stroke="#37543a" stroke-width="3" stroke-linecap="round"></line>
+          <line x1="443" y1="43" x2="453" y2="53" stroke="#a04040" stroke-width="3.5" stroke-linecap="round"></line>
+          <line x1="453" y1="43" x2="443" y2="53" stroke="#a04040" stroke-width="3.5" stroke-linecap="round"></line>
+          <g transform="translate(492 128) rotate(24)">
+            <rect x="-6" y="-40" width="13" height="58" rx="6" fill="#7a5a34"></rect>
+            <circle cx="0" cy="-44" r="13" fill="#8a6b3f"></circle>
+          </g>
+        </g>
+
+        <!-- босс мёртвый: туша на земле и лужа -->
+        <g id="bossDead">
+          <ellipse cx="452" cy="196" rx="86" ry="12" fill="#5c1f1f" opacity="0.85"></ellipse>
+          <circle cx="530" cy="190" r="5" fill="#7d2626"></circle>
+          <circle cx="368" cy="192" r="4" fill="#7d2626"></circle>
+          <circle cx="392" cy="186" r="3" fill="#7d2626"></circle>
+          <ellipse cx="452" cy="168" rx="60" ry="32" fill="#46683f" stroke="#5d8a57" stroke-width="2.5"></ellipse>
+          <circle cx="384" cy="176" r="24" fill="#46683f" stroke="#5d8a57" stroke-width="2.5"></circle>
+          <polygon points="372,192 366,200 378,196" fill="#e8e4d5"></polygon>
+          <line x1="374" y1="168" x2="384" y2="176" stroke="#20242d" stroke-width="3" stroke-linecap="round"></line>
+          <line x1="384" y1="168" x2="374" y2="176" stroke="#20242d" stroke-width="3" stroke-linecap="round"></line>
+          <line x1="390" y1="168" x2="400" y2="176" stroke="#a04040" stroke-width="3" stroke-linecap="round"></line>
+          <line x1="400" y1="168" x2="390" y2="176" stroke="#a04040" stroke-width="3" stroke-linecap="round"></line>
+          <rect x="382" y="184" width="10" height="8" rx="3" fill="#b06060"></rect>
+        </g>
+
+        <!-- брызги при добивании -->
+        <g id="burst" transform="translate(440 120)">
+          <circle class="p" r="5" fill="#b03434" style="--dx: -60px; --dy: -46px"></circle>
+          <circle class="p" r="4" fill="#c0392b" style="--dx: 44px; --dy: -60px"></circle>
+          <circle class="p" r="6" fill="#8d2828" style="--dx: -34px; --dy: -70px"></circle>
+          <circle class="p" r="3" fill="#c0392b" style="--dx: 66px; --dy: -30px"></circle>
+          <circle class="p" r="5" fill="#b03434" style="--dx: -72px; --dy: -12px"></circle>
+          <circle class="p" r="4" fill="#8d2828" style="--dx: 20px; --dy: -78px"></circle>
+          <circle class="p" r="3" fill="#b03434" style="--dx: 78px; --dy: -52px"></circle>
+          <circle class="p" r="5" fill="#c0392b" style="--dx: -18px; --dy: -84px"></circle>
+          <circle class="p" r="4" fill="#8d2828" style="--dx: 54px; --dy: 8px"></circle>
+          <circle class="p" r="3" fill="#b03434" style="--dx: -50px; --dy: 16px"></circle>
+        </g>
+
+        <!-- дух босса -->
+        <g id="ghost">
+          <g id="ghostBody">
+            <path d="M400 128
+                     a36 40 0 0 1 72 0
+                     l0 26
+                     q -9 12 -18 0 q -9 12 -18 0 q -9 12 -18 0 q -9 12 -18 0
+                     z"
+                  fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></path>
+            <circle cx="436" cy="92" r="20" fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></circle>
+            <polygon points="427,104 424,111 431,106" fill="#eef9fc" opacity="0.9"></polygon>
+            <polygon points="445,104 448,111 441,106" fill="#eef9fc" opacity="0.9"></polygon>
+            <circle cx="428" cy="90" r="4" fill="#eef9fc" opacity="0.95"></circle>
+            <line x1="440" y1="86" x2="448" y2="94" stroke="#5c98a6" stroke-width="3" stroke-linecap="round"></line>
+            <line x1="448" y1="86" x2="440" y2="94" stroke="#5c98a6" stroke-width="3" stroke-linecap="round"></line>
+          </g>
+          <g id="gburst" transform="translate(436 110)">
+            <circle class="p" r="4" fill="#9fdbe8" style="--dx: -50px; --dy: -40px"></circle>
+            <circle class="p" r="3" fill="#cdeef5" style="--dx: 44px; --dy: -52px"></circle>
+            <circle class="p" r="5" fill="#9fdbe8" style="--dx: -26px; --dy: -64px"></circle>
+            <circle class="p" r="3" fill="#cdeef5" style="--dx: 60px; --dy: -20px"></circle>
+            <circle class="p" r="4" fill="#9fdbe8" style="--dx: 30px; --dy: -70px"></circle>
+            <circle class="p" r="3" fill="#cdeef5" style="--dx: -62px; --dy: -14px"></circle>
+          </g>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- полка лута -->
+  <div class="loot hidden" id="loot">
+    <div class="cards" id="cards"></div>
+    <div class="match hidden" id="matchLine"></div>
+    <div class="caption hidden" id="caption">Всё это вывелось из одного числа. Нигде ничего не хранилось.</div>
   </div>
 
 </div>
@@ -534,33 +562,32 @@ var SEED = 234236291;
 
 var TYPES = ['лом', 'меч', 'щит', 'серп', 'лук', 'цеп', 'кол', 'коса', 'багор', 'топор'];
 var PREFIXES = ['ржавый', 'кривой', 'тупой', 'гнутый', 'унылый', 'поганый', 'дырявый', 'косой', 'трухлявый', 'обшарпанный'];
-var RARITIES = ['обычный', 'необычный', 'редкий', 'эпический', 'легендарный'];
 
 // Полоса 0..9999 нарезана на десять отсеков по тысяче — какой отсек, такой тип.
 function bucket(n) { return Math.floor(n / 1000); }
 
-function rarityOf(n) {
-  if (n < 6000) return 0;
-  if (n < 8500) return 1;
-  if (n < 9600) return 2;
-  if (n < 9900) return 3;
-  return 4;
-}
-
 // Число, делённое на тысячу, — и есть значение свойства. Без вранья и без округлений.
 function fmt(n) { return (n / 1000).toFixed(3); }
 
-// Весь предмет — из шести оборотов одного числа.
-function makeItem(seed) {
-  var c = chain(seed, 6);
+function itemName(prefixIdx, typeIdx) {
+  var p = PREFIXES[prefixIdx];
+  return p.charAt(0).toUpperCase() + p.slice(1) + ' ' + TYPES[typeIdx];
+}
+
+// Весь лут босса — из восьми оборотов одного числа:
+// меч (тип, урон, скорость, имя) и ещё два предмета (тип + имя).
+function makeLoot(seed) {
+  var c = chain(seed, 8);
   return {
     numbers: c,
     type: bucket(c[0]),
     damage: fmt(c[1]),
     speed: fmt(c[2]),
     prefix: bucket(c[3]),
-    weight: fmt(c[4]),
-    rarity: rarityOf(c[5])
+    extra: [
+      { type: bucket(c[4]), prefix: bucket(c[5]) },
+      { type: bucket(c[6]), prefix: bucket(c[7]) }
+    ]
   };
 }
 // ===== CORE END =====
@@ -568,24 +595,26 @@ function makeItem(seed) {
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var stage = $('stage');
-  var chainBlock = $('chainBlock');
+  var hud = $('hud');
   var chainEl = $('chain');
   var spinNote = $('spinNote');
   var laneWrap = $('laneWrap');
   var laneCells = $('laneCells');
   var laneMark = $('laneMark');
+  var lootEl = $('loot');
   var cardsEl = $('cards');
   var matchEl = $('matchLine');
-  var dlgEl = $('dlg');
-  var whoEl = $('who');
-  var sayEl = $('say');
-  var btnsEl = $('btns');
+  var captionEl = $('caption');
+  var gb = $('gb');
+  var pb = $('pb');
 
-  var IT = makeItem(SEED);
+  var IT = makeLoot(SEED);
   var C = IT.numbers;
   var MISS = 2000 - C[0]; // сколько не добрал до отсека щита
   var PREF = PREFIXES[IT.prefix];
-  var NAME = PREF.charAt(0).toUpperCase() + PREF.slice(1) + ' ' + TYPES[IT.type];
+  var NAME = itemName(IT.prefix, IT.type);
+  var EXTRA1 = itemName(IT.extra[0].prefix, IT.extra[0].type);
+  var EXTRA2 = itemName(IT.extra[1].prefix, IT.extra[1].type);
 
   function esc(s) {
     return String(s).replace(/[&<>]/g, function (c) {
@@ -606,16 +635,17 @@ function makeItem(seed) {
     return {
       i: 0,
       lock: false,
-      shown: 0,       // сколько чисел цепочки видно (0 = только сид ещё не показан)
+      shown: 0,        // сколько чисел цепочки видно
       seedShown: false,
       dangling: false, // закорючка показана, но результата ещё нет
       spins: 0,
       revealed: {},
+      extraShown: 0,
       card2: false
     };
   }
 
-  // ——— цепочка ———
+  // ——— числа ———
 
   function renderChain(freshIdx, freshFn) {
     var html = '';
@@ -646,34 +676,41 @@ function makeItem(seed) {
     if (c) { c.classList.remove('peek'); void c.offsetWidth; c.classList.add('peek'); }
   }
 
-  // ——— карточки ———
+  // ——— лут ———
 
   function q(v, key) { return st.revealed[key] ? v : '???'; }
 
-  function cardHtml(idx, fresh) {
-    var known = st.revealed.name;
-    return '<div class="card' + (known ? ' r' + IT.rarity : '') + '">' +
-      '<div class="cname">' + (known ? esc(NAME) : '??? меч') + '</div>' +
-      '<div class="crar">' + q(RARITIES[IT.rarity], 'rar') + ' · добыча №' + idx + '</div>' +
+  function swordCard(idx, fresh) {
+    return '<div class="card">' +
+      '<div class="cname">' + (st.revealed.name ? esc(NAME) : '??? меч') + '</div>' +
+      '<div class="ctag">добыча №' + idx + '</div>' +
       '<dl class="rows">' +
         '<dt>урон</dt><dd' + (fresh === 'dmg' ? ' class="reveal"' : '') + '>' + q(IT.damage, 'dmg') + '</dd>' +
         '<dt>скорость</dt><dd' + (fresh === 'spd' ? ' class="reveal"' : '') + '>' + q(IT.speed, 'spd') + '</dd>' +
-        '<dt>вес</dt><dd' + (fresh === 'wt' ? ' class="reveal"' : '') + '>' + q(IT.weight + ' кг', 'wt') + '</dd>' +
       '</dl>' +
       '<div class="seedline">выведен из числа <b>' + SEED + '</b></div>' +
     '</div>';
   }
 
-  function renderCards(fresh) {
-    var html = cardHtml(1, fresh);
-    if (st.card2) html += cardHtml(2, null);
+  function miniCard(name, idx) {
+    return '<div class="card mini">' +
+      '<div class="cname">' + esc(name) + '</div>' +
+      '<div class="ctag">добыча №' + idx + '</div>' +
+    '</div>';
+  }
+
+  function renderLoot(fresh) {
+    var html = swordCard(1, fresh);
+    if (st.extraShown > 0) html += miniCard(EXTRA1, 2);
+    if (st.extraShown > 1) html += miniCard(EXTRA2, 3);
+    if (st.card2) html += swordCard('1, второе убийство', null);
     cardsEl.innerHTML = html;
-    cardsEl.classList.remove('hidden');
+    lootEl.classList.remove('hidden');
   }
 
   function reveal(key, fresh) {
     st.revealed[key] = true;
-    renderCards(fresh);
+    renderLoot(fresh);
   }
 
   // ——— сцена ———
@@ -692,174 +729,168 @@ function makeItem(seed) {
   }
 
   // ——— сценарий ———
-  // w: кто говорит (p — игрок, g — дух, n — ремарка); fx — что происходит на экране.
+  // Каждый шаг: p — реплика игрока (она же кнопка), g — ответ духа,
+  // fx — что происходит на экране в момент клика, kind — особые действия.
 
-  var L = [
-    { w: 'n', t: 'Босс почти готов.', btn: 'kill' },
-    { w: 'g', t: 'Вот твой лут. ' + SEED + '.', fx: function () {
-        st.seedShown = true; chainBlock.classList.remove('hidden'); renderChain(-1, false);
-      } },
-    { w: 'p', t: 'Че???' },
-    { w: 'g', t: 'Ну лут. Выведи из него, что там в нём.' },
-    { w: 'p', t: 'Дай мне мой лут, или я найду способ тебя ещё раз прикончить.' },
-    { w: 'g', t: 'Ладно, вот функция, как вывести лут из этого числа.', fx: function () {
-        st.dangling = true; renderChain(-1, true);
-      } },
-    { w: 'p', t: 'ЧЕГО БЛЯТЬ?' },
-    { w: 'g', t: 'Ладно, давай сделаем вид, что ты понимаешь эту часть.' },
-    { w: 'p', t: 'Я тебя серьёзно ещё раз убью сейчас.' },
-    { w: 'g', t: 'Ох. Ну вот я дал тебе число, дал функцию. Применяешь функцию к числу — получаешь другое число.' },
-    { w: 'p', t: 'Какие блять числа, где мой меч, или щит, или что ты там в своей жопе прятал?' },
-    { w: 'g', t: 'Ну смотри. Функция эта одно число превращает в другое.' },
-    { w: 'p', t: 'Я смотрю, тебе не терпится снова, да? Превратиться из жирного тролля в какое-то бестелесное нумерологическое создание блять?' },
-    { w: 'g', t: 'Смотри: число моё. Применил функцию — получил другое число.', fx: function () {
-        st.dangling = false; st.shown = 1; renderChain(0, false);
-      } },
-    { w: 'p', t: 'У тебя было два глаза. Я тебе выколол один. Ты ощутил разницу, а?' },
-    { w: 'g', t: '...Грубо. Но, в общем, да. Именно так.' },
-    { w: 'g', t: 'Смотри: твоё новое число больше тысячи, но меньше двух тысяч — ЭТО МЕЧ! Представляешь?', fx: showLane },
-    { w: 'p', t: '...а от двух тысяч до трёх что?' },
-    { w: 'g', t: 'Щит.', fx: peekShield },
-    { w: 'p', t: 'БЛЯТЬ. Сильно не добрал?' },
-    { w: 'g', t: 'На ' + MISS + '.' },
-    { w: 'p', t: 'ПЕРЕКРУТИ.', btn: 'spin' },
-    { w: 'g', t: 'Накрутился? Число одно. Крутится одинаково. Бери меч.' },
-    { w: 'g', t: 'Та бери, бери.', fx: function () {
-        stage.classList.add('hasSword1'); renderCards(null);
-      } },
-    { w: 'p', t: 'Этот меч такой же бесполезный, как и ты, да? СКОЛЬКО УРОНА У НЕГО????' },
-    { w: 'g', t: 'А вот тут интересно. Урон мы сейчас ВЫВЕДЕМ ТОЙ ЖЕ ФУНКЦИЕЙ, ПРИКИНЬ.' },
-    { w: 'g', t: 'Если скрестить призрака и бомбу из ежа, что выведется — знаешь?' },
-    { w: 'g', t: 'Смотри-смотри: берём твоё новое число и крутим ещё раз. Выпало ' + C[1] + '. Делим на тысячу — вот твой урон.', fx: function () {
-        st.shown = 2; renderChain(1, false); reveal('dmg', 'dmg');
-      } },
-    { w: 'p', t: IT.damage + '?! Что за урон — ' + IT.damage + '?!' },
-    { w: 'g', t: 'Честный.' },
-    { w: 'p', t: 'СКОРОСТЬ АТАКИ СКОЛЬКО? И знаешь что — дай мне на этот раз число ПОБОЛЬШЕ. Чтоб скорость побольше.' },
-    { w: 'g', t: 'Число побольше — это не лут пожирнее. Это другой лут. Целиком. Вот из соседнего числа, на единицу больше твоего, выпадает серп. Кривой.' },
-    { w: 'p', t: 'Почему кривой?!' },
-    { w: 'g', t: 'Потому что число такое. Не я придумал. Я вообще уже умер.', fx: function () {
-        st.shown = 3; renderChain(2, false); reveal('spd', 'spd');
-      } },
-    { w: 'p', t: 'Ладно. Показывай, что ещё у тебя есть.' },
-    { w: 'g', t: 'Кручу дальше.', fx: function () {
-        st.lock = true;
-        setTimeout(function () { st.shown = 4; renderChain(3, false); reveal('name', null); }, 150);
-        setTimeout(function () { st.shown = 5; renderChain(4, false); reveal('wt', 'wt'); }, 700);
-        setTimeout(function () { st.shown = 6; renderChain(5, false); reveal('rar', null); st.lock = false; }, 1250);
-      } },
-    { w: 'p', t: '«' + PREF.charAt(0).toUpperCase() + PREF.slice(1) + '»?! Это ты сейчас про меч или про меня?' },
-    { w: 'g', t: 'Число решило. Я тут никто.' },
+  var EX = [
+    { p: 'ДОБИТЬ', kind: 'kill',
+      g: 'Вот твой лут. ' + SEED + '.',
+      fx: function () { st.seedShown = true; hud.classList.remove('hidden'); renderChain(-1, false); } },
+    { p: 'Че???', g: 'Ну лут. Выведи из него, что там в нём.' },
+    { p: 'Дай мне мой лут, или я найду способ тебя ещё раз прикончить.',
+      g: 'Ладно, вот функция, как вывести лут из этого числа.',
+      fx: function () { st.dangling = true; renderChain(-1, true); } },
+    { p: 'ЧЕГО БЛЯТЬ?', g: 'Ладно, давай сделаем вид, что ты понимаешь эту часть.' },
+    { p: 'Я тебя серьёзно ещё раз убью сейчас.',
+      g: 'Ох. Ну вот я дал тебе число, дал функцию. Применяешь функцию к числу — получаешь другое число.' },
+    { p: 'Какие блять числа, где мой меч, или щит, или что ты там в своей жопе прятал?',
+      g: 'Ну смотри. Функция эта одно число превращает в другое.' },
+    { p: 'Я смотрю, тебе не терпится снова, да? Превратиться из жирного тролля в какое-то бестелесное нумерологическое создание блять?',
+      g: 'Смотри: число моё. Применил функцию — получил другое число.',
+      fx: function () { st.dangling = false; st.shown = 1; renderChain(0, false); } },
+    { p: 'У тебя было два глаза. Я тебе выколол один. Ты ощутил разницу, а?',
+      g: '...Грубо. Но, в общем, да. Именно так. И смотри: новое число больше тысячи, но меньше двух тысяч — ЭТО МЕЧ! Представляешь?',
+      fx: showLane },
+    { p: '...а от двух тысяч до трёх что?', g: 'Щит.', fx: peekShield },
+    { p: 'БЛЯТЬ. Сильно не добрал?', g: 'На ' + MISS + '.' },
+    { p: 'ПЕРЕКРУТИ.', g: null, fx: function () { doSpin(); } },
+    { p: 'ПЕРЕКРУТИ!!!', g: null, fx: function () { doSpin(); } },
+    { p: '...',
+      g: 'Накрутился? Число одно. Крутится одинаково. Бери меч. Та бери, бери.',
+      fx: function () { stage.classList.add('hasSword1'); renderLoot(null); } },
+    { p: 'Этот меч такой же бесполезный, как и ты, да? СКОЛЬКО УРОНА У НЕГО????',
+      g: 'А вот тут интересно. Урон мы сейчас ВЫВЕДЕМ ТОЙ ЖЕ ФУНКЦИЕЙ, ПРИКИНЬ. Если скрестить призрака и бомбу из ежа — знаешь, что выведется?' },
+    { p: 'Ещё одна такая шутка, и я узнаю, где ты респавнишься.',
+      g: '...Число. Выведется число. Из чего угодно выводится число, если правильно крутить. Вот, кручу твоё: выпало ' + C[1] + '. Делим на тысячу — урон ' + IT.damage + '.',
+      fx: function () { st.shown = 2; renderChain(1, false); reveal('dmg', 'dmg'); } },
+    { p: IT.damage + '?! Что за урон — ' + IT.damage + '?!', g: 'Честный.' },
+    { p: 'СКОРОСТЬ АТАКИ СКОЛЬКО? И знаешь что — дай мне на этот раз число ПОБОЛЬШЕ. Чтоб скорость побольше.',
+      g: 'Число побольше — это не лут пожирнее. Это другой лут. Целиком. Вот из соседнего числа, на единицу больше твоего, выпадает серп. Кривой.' },
+    { p: 'Почему кривой?!',
+      g: 'Потому что число такое. Не я придумал. Я вообще уже умер. А скорость — вот: кручу, выпало ' + C[2] + ', делим на тысячу. Скорость ' + IT.speed + '. Не благодари.',
+      fx: function () { st.shown = 3; renderChain(2, false); reveal('spd', 'spd'); } },
+    { p: 'Хоть имя-то у этого позора есть?',
+      g: 'Кручу. Выпало ' + C[3] + ' — а это прозвище «' + PREF + '». Знакомься: ' + NAME + '.',
+      fx: function () { st.shown = 4; renderChain(3, false); reveal('name', null); } },
+    { p: '«' + PREF.charAt(0).toUpperCase() + PREF.slice(1) + '»?! Это ты сейчас про меч или про меня?',
+      g: 'Число решило. Я тут никто.' },
     /* [слот: бит про хранение — вставить, когда автор пришлёт] */
-    { w: 'p', t: 'Так. Последний вопрос. А если я тебя убью ещё раз?' },
-    { w: 'g', t: 'Получишь то же число.' },
-    { w: 'p', t: 'И тот же ' + PREF + ' меч с уроном ' + IT.damage + '?' },
-    { w: 'g', t: 'И тот же ' + PREF + ' меч. Я, знаешь ли, не рандомный. Я — ' + SEED + '. Хоть сто раз меня убей.' },
-    { w: 'n', t: 'Игрок заносит меч.', fx: function () { stage.classList.add('raised'); } },
-    { w: 'g', t: 'НУ ПОПРОБУЙ.', btn: 'rekill' },
-    { w: 'g', t: 'Ну что, доволен? Два одинаковых меча. Коллекционер блять.' },
-    { w: 'n', t: 'Всё, что есть у меча, вывелось из одного числа. Нигде ничего не лежало.', btn: 'restart' }
+    { p: 'Так. А что у тебя ЕЩЁ есть? Кроме этого огрызка.',
+      g: 'Кручу дальше — падает остальное. ' + EXTRA1 + '. И... ещё один ' + EXTRA2.toLowerCase() +
+         '. Не смотри на меня так. Всё, что прятал, лежало в том же числе.',
+      fx: function () {
+        st.lock = true;
+        setTimeout(function () { st.shown = 6; renderChain(5, false); st.extraShown = 1; renderLoot(null); }, 200);
+        setTimeout(function () { st.shown = 8; renderChain(7, false); st.extraShown = 2; renderLoot(null); st.lock = false; }, 850);
+      } },
+    { p: 'Так. Последний вопрос. А если я тебя убью ещё раз?', g: 'Получишь то же число.' },
+    { p: 'И тот же ' + PREF + ' меч с уроном ' + IT.damage + '?',
+      g: 'И тот же ' + PREF + ' меч. И тот же ' + EXTRA1.toLowerCase() + '. Я, знаешь ли, не рандомный. Я — ' + SEED + '. Хоть сто раз меня убей.' },
+    { p: 'ЩАС ПРОВЕРИМ.', g: 'НУ ПОПРОБУЙ.', fx: function () { stage.classList.add('raised'); } },
+    { p: 'УБИТЬ ЕЩЁ РАЗ', kind: 'rekill',
+      g: 'Ну что, доволен? Два одинаковых косых меча. Коллекционер блять.',
+      fx: function () { captionEl.classList.remove('hidden'); } },
+    { p: 'СНАЧАЛА', kind: 'restart' }
   ];
 
-  // ——— движок диалога ———
-
-  function btn(label, cls, onClick) {
-    var b = document.createElement('button');
-    b.type = 'button';
-    b.className = cls;
-    b.textContent = label;
-    b.addEventListener('click', function (e) { e.stopPropagation(); onClick(); });
-    return b;
+  function doSpin() {
+    st.spins++;
+    renderChain(0, true);
+    spinNote.textContent = st.spins === 1
+      ? 'выпало ' + C[0] + '. опять.'
+      : 'выпало ' + C[0] + '. опять. (' + st.spins + '-й раз)';
   }
 
-  function render() {
-    var s = L[st.i];
-    whoEl.className = 'who ' + (s.w === 'p' ? 'hero' : s.w === 'g' ? 'ghost' : 'note');
-    whoEl.textContent = s.w === 'p' ? 'Игрок' : s.w === 'g' ? 'Дух босса' : '—';
-    sayEl.className = 'say' + (s.w === 'n' ? ' note' : '');
-    sayEl.textContent = s.t;
-    btnsEl.innerHTML = '';
+  // ——— движок: кнопка — это реплика игрока ———
 
-    if (s.btn === 'kill') {
-      btnsEl.appendChild(btn('ДОБИТЬ', 'kill', function () {
-        if (st.lock) return;
-        st.lock = true;
-        killAnim();
-        setTimeout(function () { st.lock = false; next(); }, 1000);
-      }));
-    } else if (s.btn === 'spin') {
-      btnsEl.appendChild(btn('КРУТАНУТЬ ЕЩЁ РАЗ', '', function () {
-        st.spins++;
-        renderChain(0, true);
-        spinNote.textContent = st.spins === 1
-          ? 'выпало ' + C[0] + '. опять.'
-          : 'выпало ' + C[0] + '. опять. (' + st.spins + '-й раз)';
-        if (st.spins === 1) btnsEl.appendChild(btn('дальше ▸', 'next', next));
-      }));
-    } else if (s.btn === 'rekill') {
-      btnsEl.appendChild(btn('УБИТЬ ЕЩЁ РАЗ', 'kill', function () {
-        if (st.lock) return;
-        st.lock = true;
-        rekillAnim();
-        // та же цепочка пробегает заново — числа те же, предмет тот же
-        for (var k = 0; k < C.length; k++) {
-          (function (k) {
-            setTimeout(function () { renderChain(k, false); }, 350 + k * 260);
-          })(k);
-        }
-        setTimeout(function () {
-          st.card2 = true;
-          renderCards(null);
-          stage.classList.add('hasSword2');
-          matchEl.textContent = 'Совпал. Предмет в предмет.';
-          matchEl.classList.remove('hidden');
-          st.lock = false;
-          next();
-        }, 350 + C.length * 260 + 500);
-      }));
-    } else if (s.btn === 'restart') {
-      btnsEl.appendChild(btn('СНАЧАЛА ▸', '', reset));
-    } else {
-      btnsEl.appendChild(btn('дальше ▸', 'next', next));
-    }
+  function speak(text) {
+    gb.classList.remove('hidden');
+    gb.textContent = text;
+    gb.style.animation = 'none';
+    void gb.offsetWidth;
+    gb.style.animation = '';
   }
 
-  function next() {
+  function renderButton() {
+    var e = EX[st.i];
+    if (!e) { pb.classList.add('hidden'); return; }
+    pb.classList.remove('hidden');
+    pb.className = 'bubble player' + (e.kind === 'kill' || e.kind === 'rekill' ? ' danger' : '');
+    pb.innerHTML = esc(e.p) + '<span class="hint">▸</span>';
+    pb.style.animation = 'none';
+    void pb.offsetWidth;
+    pb.style.animation = '';
+  }
+
+  pb.addEventListener('click', function () {
     if (st.lock) return;
-    if (st.i >= L.length - 1) return;
+    var e = EX[st.i];
+    if (!e) return;
+
+    if (e.kind === 'restart') { reset(); return; }
+
+    if (e.kind === 'kill') {
+      st.lock = true;
+      pb.classList.add('hidden');
+      killAnim();
+      setTimeout(function () {
+        if (e.fx) e.fx();
+        speak(e.g);
+        st.i++;
+        st.lock = false;
+        renderButton();
+      }, 1100);
+      return;
+    }
+
+    if (e.kind === 'rekill') {
+      st.lock = true;
+      pb.classList.add('hidden');
+      rekillAnim();
+      // та же цепочка пробегает заново — числа те же, лут тот же
+      for (var k = 0; k < st.shown; k++) {
+        (function (k) {
+          setTimeout(function () { renderChain(k, false); }, 350 + k * 220);
+        })(k);
+      }
+      setTimeout(function () {
+        st.card2 = true;
+        renderLoot(null);
+        stage.classList.add('hasSword2');
+        matchEl.textContent = 'Совпал. Предмет в предмет.';
+        matchEl.classList.remove('hidden');
+        if (e.fx) e.fx();
+        speak(e.g);
+        st.i++;
+        st.lock = false;
+        renderButton();
+      }, 350 + st.shown * 220 + 500);
+      return;
+    }
+
+    if (e.fx) e.fx();
+    if (e.g !== null) speak(e.g);
     st.i++;
-    var s = L[st.i];
-    if (s.fx) s.fx();
-    render();
-  }
+    renderButton();
+  });
 
   function reset() {
     st = freshState();
     stage.classList.remove('killed', 'raised', 'hasSword1', 'hasSword2', 'flinch');
     $('burst').classList.remove('go');
     $('gburst').classList.remove('go');
-    chainBlock.classList.add('hidden');
+    hud.classList.add('hidden');
     laneWrap.classList.add('hidden');
     chainEl.innerHTML = '';
     spinNote.textContent = '';
-    cardsEl.classList.add('hidden');
+    lootEl.classList.add('hidden');
     cardsEl.innerHTML = '';
     matchEl.classList.add('hidden');
-    render();
+    captionEl.classList.add('hidden');
+    gb.classList.add('hidden');
+    gb.textContent = '';
+    renderButton();
   }
-
-  // клик по коробке диалога листает обычные реплики
-  dlgEl.addEventListener('click', function () {
-    var s = L[st.i];
-    if (!s.btn) next();
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === ' ' || e.key === 'Enter') {
-      var s = L[st.i];
-      if (!s.btn) { e.preventDefault(); next(); }
-    }
-  });
 
   reset();
 })();
