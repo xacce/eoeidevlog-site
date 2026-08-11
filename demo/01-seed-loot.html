@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Сто предметов из одного числа</title>
+<title>Лут из одного числа</title>
 <style>
   :root {
     --bg: #111318;
@@ -14,6 +14,8 @@
     --dim: #8b94a3;
     --dim-2: #6d7684;
     --accent: #7aa2f7;
+    --blood: #b03434;
+    --ghost: #9fdbe8;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
@@ -52,18 +54,8 @@
     font-weight: 600;
   }
 
-  h2 {
-    font-size: 0.82rem;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--dim);
-    font-weight: 600;
-    margin: 0 0 0.7rem;
-  }
-
   p { margin: 0 0 0.8rem; }
   p.lead { color: var(--dim); }
-  p:last-child { margin-bottom: 0; }
 
   .block {
     background: var(--panel);
@@ -73,42 +65,263 @@
     margin-top: 1.1rem;
   }
 
-  .controls {
+  .hidden { display: none !important; }
+
+  /* ——— сцена ——— */
+
+  .stage {
+    margin-top: 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #12151c;
+    overflow: hidden;
+  }
+
+  .stage svg { display: block; width: 100%; height: auto; max-width: 100%; }
+
+  #bossDead, #ghost, #drop1, #drop2 { display: none; }
+  .killed #bossAlive { display: none; }
+  .killed #bossDead { display: block; }
+  .killed #ghost { display: block; animation: rise 0.9s ease-out; }
+  .hasSword1 #drop1 { display: block; }
+  .hasSword2 #drop2 { display: block; }
+  .hasSword1 #drop1 .sw, .hasSword2 #drop2 .sw { animation: plop 0.5s ease-out; }
+
+  #ghostBody { animation: floaty 2.6s ease-in-out infinite; }
+  .flinch #ghostBody { animation: flinch 0.6s ease-out, floaty 2.6s 0.6s ease-in-out infinite; }
+
+  #heroArm { transition: transform 0.4s ease-out; transform-origin: 128px 128px; }
+  .raised #heroArm { transform: rotate(-95deg); }
+
+  @keyframes rise {
+    from { transform: translateY(46px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+  }
+  @keyframes flinch {
+    0% { transform: translateY(0) rotate(0); }
+    30% { transform: translateY(4px) rotate(7deg); }
+    60% { transform: translateY(-2px) rotate(-5deg); }
+    100% { transform: translateY(0) rotate(0); }
+  }
+  @keyframes plop {
+    0% { transform: translateY(-30px); opacity: 0; }
+    70% { transform: translateY(4px); opacity: 1; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .p { opacity: 0; }
+  .go .p { animation: fly 0.75s ease-out forwards; }
+  @keyframes fly {
+    0% { transform: translate(0, 0); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+  }
+
+  /* ——— цепочка чисел ——— */
+
+  .chainwrap { margin-top: 1.1rem; }
+
+  .chain {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.25rem 0.35rem;
+    font-family: var(--mono);
   }
 
-  .field {
+  .tok {
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--accent);
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+  }
+
+  .tok.seed { color: var(--text); }
+  .tok.fresh { animation: catch 0.9s ease-out; }
+
+  @keyframes catch {
+    0% { background: #35507d; color: #eaf1ff; }
+    100% { background: var(--bg); color: var(--accent); }
+  }
+
+  .fn { flex: none; width: 2rem; height: 1rem; color: var(--dim); }
+  .fn.fresh { animation: wiggle 0.8s ease-out; }
+  @keyframes wiggle {
+    0% { transform: rotate(0); color: #eaf1ff; }
+    30% { transform: rotate(10deg); }
+    60% { transform: rotate(-8deg); }
+    100% { transform: rotate(0); }
+  }
+
+  .spinnote {
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+    color: var(--dim);
+    min-height: 1.2em;
+  }
+
+  /* полоса отсеков: куда попало число */
+
+  .lane { position: relative; margin-top: 0.7rem; }
+
+  .cells {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .cells .c {
+    padding: 4px 1px;
+    text-align: center;
+    font-size: clamp(7px, 1.6vw, 10px);
+    line-height: 1.2;
+    color: var(--dim);
+    background: #191d25;
+    border-left: 1px solid var(--line);
+    overflow-wrap: anywhere;
+  }
+
+  .cells .c:first-child { border-left: none; }
+  .cells .c.lit { background: #23324d; color: #dbe6fb; }
+  .cells .c.peek { animation: peek 1.2s ease-out; }
+  @keyframes peek {
+    0% { background: #4d2323; color: #fbdbdb; }
+    100% { background: #191d25; color: var(--dim); }
+  }
+
+  .mk {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--accent);
+    border-radius: 1px;
+  }
+
+  .under {
     display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    flex: 1 1 100%;
-    min-width: 0;
+    justify-content: space-between;
+    margin-top: 0.2rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--dim-2);
   }
 
-  label {
-    font-size: 0.78rem;
+  /* ——— карточки лута ——— */
+
+  .cards { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.1rem; }
+
+  .card {
+    flex: 1 1 240px;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--rc, var(--line));
+    border-radius: 6px;
+    background: var(--panel-2);
+    padding: 0.7rem 0.8rem;
+    animation: plopcard 0.45s ease-out;
+  }
+
+  @keyframes plopcard {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .cname {
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--rc, var(--text));
+    margin-bottom: 0.15rem;
+    overflow-wrap: break-word;
+  }
+
+  .crar { font-size: 0.78rem; color: var(--dim); margin-bottom: 0.5rem; }
+
+  .rows {
+    display: grid;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: 0.15rem 0.7rem;
+    font-size: 0.87rem;
+  }
+
+  .rows dt { color: var(--dim); }
+  .rows dd {
+    margin: 0;
+    font-family: var(--mono);
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .rows dd.reveal { animation: catch 0.9s ease-out; border-radius: 4px; }
+
+  .seedline {
+    margin-top: 0.55rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.8rem;
     color: var(--dim);
   }
 
-  input[type="text"] {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    padding: 0.5rem 0.6rem;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--text);
+  .seedline b {
     font-family: var(--mono);
-    font-size: 0.95rem;
+    color: var(--text);
+    font-weight: 500;
+    overflow-wrap: anywhere;
   }
 
-  input[type="text"]:focus {
-    outline: none;
-    border-color: var(--accent);
+  .match {
+    margin-top: 0.7rem;
+    padding: 0.5rem 0.6rem;
+    border-left: 2px solid #6fae7a;
+    font-size: 0.85rem;
+    color: #b6d6bc;
   }
+
+  /* ——— диалог ——— */
+
+  .dlg {
+    margin-top: 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    padding: 0.8rem 0.9rem;
+    min-height: 8.2em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .who {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+
+  .who.hero { color: #a9c4fb; border-color: #35507d; background: #1b2537; }
+  .who.ghost { color: #aee7f2; border-color: #2f5c66; background: #16272c; }
+  .who.note { visibility: hidden; }
+
+  .say { font-size: 0.98rem; min-height: 2.9em; }
+  .say.note { color: var(--dim); font-style: italic; }
+
+  .btns { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: auto; }
 
   button {
     flex: 1 1 auto;
@@ -126,712 +339,253 @@
   button:hover { border-color: var(--accent); }
   button:active { background: #232833; }
 
-  button.primary {
-    background: #23324d;
-    border-color: #35507d;
-    color: #cfdcf7;
-  }
-
-  button:disabled {
-    opacity: 0.45;
-    cursor: default;
-    background: var(--panel-2);
-    border-color: var(--line);
-    color: var(--dim);
-  }
-
-  .note {
-    font-size: 0.82rem;
-    color: var(--dim);
-    margin-top: 0.6rem;
-  }
-
-  .determinism {
-    margin-top: 0.7rem;
-    padding: 0.5rem 0.6rem;
-    border-left: 2px solid var(--line);
-    font-size: 0.85rem;
-    color: var(--dim);
-  }
-
-  .determinism.match { border-left-color: #6fae7a; color: #b6d6bc; }
-  .determinism.mismatch { border-left-color: #d86a5c; color: #e8b3ab; }
-
-  /* ——— список и панель предмета ——— */
-
-  .split {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.7rem;
-    align-items: stretch;
-  }
-
-  .list {
-    flex: 1 1 55%;
-    min-width: 260px;
-    height: 320px;
-    overflow-y: auto;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--bg);
-  }
-
-  .row {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.28rem 0.5rem;
-    background: none;
-    border: none;
-    border-left: 3px solid var(--rc);
-    border-radius: 0;
-    text-align: left;
-    font-family: var(--sans);
-    font-size: 0.87rem;
-    color: var(--rc);
-    cursor: pointer;
-  }
-
-  .row:hover { background: #1a1e26; border-color: var(--rc); }
-
-  .row.sel {
-    background: #232a36;
-    color: #f2f5fa;
-  }
-
-  .row .num {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--dim-2);
-    flex: none;
-    width: 1.9em;
-    text-align: right;
-  }
-
-  .row .nm { flex: 1 1 auto; min-width: 0; }
-
-  .row .rar {
-    flex: none;
-    font-size: 0.72rem;
-    color: var(--dim-2);
-  }
-
-  .itempanel {
-    flex: 1 1 41%;
-    min-width: 200px;
-    overflow-y: auto;
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--rc, var(--line));
-    border-radius: 6px;
-    background: var(--panel-2);
-    padding: 0.7rem 0.8rem;
-  }
-
-  .itempanel.empty {
-    color: var(--dim-2);
-    font-size: 0.85rem;
-    border-left-color: var(--line);
-    display: flex;
-    align-items: center;
-  }
-
-  .cname {
-    font-size: 1.02rem;
-    font-weight: 600;
-    color: var(--rc);
-    margin-bottom: 0.15rem;
-    overflow-wrap: break-word;
-  }
-
-  .crar {
-    font-size: 0.78rem;
-    color: var(--dim);
-    margin-bottom: 0.5rem;
-  }
-
-  .rows {
-    display: grid;
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-    gap: 0.15rem 0.7rem;
-    font-size: 0.87rem;
-  }
-
-  .rows dt { color: var(--dim); }
-  .rows dd {
-    margin: 0;
-    font-family: var(--mono);
-    text-align: right;
-    overflow-wrap: anywhere;
-  }
-
-  .seedline {
-    margin-top: 0.55rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--line);
-    font-size: 0.8rem;
-    color: var(--dim);
-  }
-
-  .seedline b {
-    font-family: var(--mono);
-    color: var(--text);
-    font-weight: 500;
-    overflow-wrap: anywhere;
-  }
-
-  /* ——— пошаговое извлечение ——— */
-
-  .drum {
-    margin-top: 0.7rem;
-    padding: 0.5rem 0.6rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--bg);
-    font-family: var(--mono);
-    font-size: 0.9rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.1rem 0.6rem;
-    align-items: baseline;
-  }
-
-  .drum .lbl {
-    font-family: var(--sans);
-    font-size: 0.78rem;
-    color: var(--dim);
-  }
-
-  .drum .now {
-    color: var(--accent);
-    font-size: 1.35rem;
-    letter-spacing: 0.01em;
-    border-radius: 4px;
-    padding: 0 0.2rem;
-  }
-
-  .drum .now.flash { animation: catch 0.6s ease-out; }
-
-  @keyframes catch {
-    0% { background: #35507d; color: #eaf1ff; }
-    100% { background: transparent; color: var(--accent); }
-  }
-
-  .drum .hint {
-    font-family: var(--sans);
-    font-size: 0.78rem;
-    color: var(--dim);
-  }
-
-  .steps { margin-top: 0.7rem; }
-
-  .step {
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--line);
-    border-radius: 6px;
-    padding: 0.45rem 0.6rem;
-    margin-bottom: 0.35rem;
-    background: var(--panel-2);
-  }
-
-  .step.closed {
-    background: none;
-    border-style: dashed;
-    border-left-style: dashed;
-  }
-
-  .step.fresh { border-left-color: var(--accent); }
-
-  .step .head {
-    display: flex;
-    gap: 0.5rem;
-    align-items: baseline;
-    width: 100%;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: 0;
-    font-family: var(--sans);
-    text-align: left;
-    cursor: default;
-  }
-
-  button.head { cursor: pointer; }
-  button.head:hover { border: none; }
-  button.head:hover .who { color: var(--text); }
-
-  .step .who {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 0.85rem;
-    color: var(--dim);
-  }
-
-  .step .what {
-    flex: none;
-    font-family: var(--mono);
-    font-size: 0.92rem;
-    color: var(--text);
-    overflow-wrap: anywhere;
-  }
-
-  .step.closed .what { color: var(--dim-2); }
-
-  .step .chev {
-    flex: none;
-    width: 0.8rem;
-    text-align: center;
-    color: var(--dim-2);
-    font-size: 0.8rem;
-    transition: transform 0.15s ease-out;
-  }
-
-  .step.fresh .chev {
-    transform: rotate(90deg);
-    color: var(--accent);
-  }
-
-  .body { margin-top: 0.5rem; }
-
-  /* стрелка: одна и та же полоса от нуля до единицы */
-
-  .bar {
-    position: relative;
-    height: 12px;
-    border-radius: 4px;
-    background: #20242d;
-    border: 1px solid var(--line);
-  }
-
-  .mk {
-    position: absolute;
-    top: -4px;
-    bottom: -4px;
-    width: 2px;
-    margin-left: -1px;
-    background: var(--accent);
-    border-radius: 1px;
-  }
-
-  .under {
-    position: relative;
-    height: 1.05rem;
-    margin-top: 0.2rem;
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--dim-2);
-  }
-
-  .under .lo { position: absolute; left: 0; }
-  .under .hi { position: absolute; right: 0; }
-
-  /* число стоит над меткой, а не рядом с краями — так они не сталкиваются */
-  .over {
-    position: relative;
-    height: 1.25rem;
-    font-family: var(--mono);
-  }
-
-  .over .vl {
-    position: absolute;
-    bottom: 0;
-    transform: translateX(-50%);
-    color: var(--accent);
-    font-size: 0.85rem;
-    white-space: nowrap;
-  }
-
-  /* линейки */
-
-  .lane { position: relative; margin-top: 0.7rem; }
-
-  .cells {
-    display: grid;
-    gap: 0;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .cells .c {
-    padding: 4px 2px;
-    text-align: center;
-    font-size: clamp(7px, 1.5vw, 10px);
-    line-height: 1.2;
-    color: var(--dim);
-    background: #191d25;
-    border-left: 1px solid var(--line);
-    overflow-wrap: anywhere;
-  }
-
-  .cells .c:first-child { border-left: none; }
-
-  .cells .c.lit {
-    background: #23324d;
-    color: #dbe6fb;
-  }
-
-  .names {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-    gap: 3px;
-    border: none;
-    overflow: visible;
-  }
-
-  .names .c {
-    border: 1px solid var(--line);
-    border-radius: 3px;
-    font-size: clamp(9px, 2vw, 11px);
-  }
-
-  .names .c.lit { border-color: var(--accent); }
-
-  .bands {
-    display: flex;
-    height: 24px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .bands .b {
-    min-width: 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--mono);
-    font-size: 9px;
-    color: var(--rc);
-    background: #1a1e26;
-    background: color-mix(in srgb, var(--rc) 18%, #171b22);
-    border-left: 1px solid #10131a;
-    overflow: hidden;
-  }
-
-  .bands .b:first-child { border-left: none; }
-
-  .bands .b.lit {
-    background: var(--rc);
-    background: color-mix(in srgb, var(--rc) 62%, #171b22);
-    color: #10131a;
+  button.next { color: var(--dim); }
+  button.kill {
+    background: #45201f;
+    border-color: #7d3532;
+    color: #f2c6c2;
     font-weight: 700;
+    letter-spacing: 0.04em;
   }
-
-  .phrase {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--text);
-  }
-
-  .done {
-    margin-top: 0.6rem;
-    padding: 0.5rem 0.6rem;
-    border-left: 2px solid #6fae7a;
-    font-size: 0.85rem;
-    color: #b6d6bc;
-  }
-
-  hr.sep {
-    border: none;
-    border-top: 1px solid var(--line);
-    margin: 1.6rem 0 0;
-  }
+  button.kill:hover { border-color: #b05450; }
 
   @media (max-width: 380px) {
     .demo { padding: 1.1rem 0.7rem 2rem; }
-    .drum { font-size: 0.82rem; }
+    .say { font-size: 0.93rem; }
   }
 </style>
 </head>
 <body>
 <div class="demo">
 
-  <h1>Сто предметов из одного числа</h1>
-  <p class="lead">На пол падает сотня предметов. Ни один из них нигде не записан:
-  есть только сид мира — одно число. Всё остальное вычисляется из него заново
-  каждый раз, когда понадобится.</p>
+  <h1>Лут из одного числа</h1>
+  <p class="lead">Добейте босса и заберите своё. Всё, что здесь выпадает,
+  по-настоящему вычисляется на этой странице — из одного числа.</p>
 
-  <div class="block">
-    <h2>Шаг 1. Уронить лут</h2>
-    <div class="controls">
-      <div class="field">
-        <label for="worldSeed">Сид мира — любой текст или число</label>
-        <input type="text" id="worldSeed" value="12345" spellcheck="false" autocomplete="off">
-      </div>
-      <button class="primary" id="dropBtn">Уронить 100 предметов</button>
-      <button id="randBtn">Случайный сид</button>
-    </div>
-    <div class="determinism" id="determinism">—</div>
+  <div class="stage" id="stage">
+    <svg viewBox="0 0 600 230" aria-label="Сцена: герой и босс">
+      <!-- земля -->
+      <rect x="0" y="198" width="600" height="32" fill="#171a20"></rect>
+      <line x1="0" y1="198" x2="600" y2="198" stroke="#2a2f3a" stroke-width="2"></line>
+
+      <!-- герой -->
+      <g id="hero">
+        <rect x="112" y="168" width="10" height="30" rx="4" fill="#2e3a58"></rect>
+        <rect x="128" y="168" width="10" height="30" rx="4" fill="#2e3a58"></rect>
+        <rect x="106" y="116" width="38" height="58" rx="12" fill="#3d4c72" stroke="#5d6f9e" stroke-width="2"></rect>
+        <circle cx="125" cy="98" r="16" fill="#d9c6a5"></circle>
+        <path d="M108 96 a17 17 0 0 1 34 0 l0 -6 a17 12 0 0 0 -34 0 z" fill="#5d6f9e"></path>
+        <rect x="122" y="92" width="6" height="12" rx="2" fill="#5d6f9e"></rect>
+        <circle cx="132" cy="99" r="2" fill="#20242d"></circle>
+        <g id="heroArm">
+          <rect x="126" y="124" width="26" height="9" rx="4" fill="#3d4c72" stroke="#5d6f9e" stroke-width="1.5"></rect>
+          <g transform="translate(150 128) rotate(-38)">
+            <rect x="4" y="-3" width="52" height="6" rx="2" fill="#c8d2e0"></rect>
+            <polygon points="56,-3 66,0 56,3" fill="#c8d2e0"></polygon>
+            <rect x="0" y="-8" width="5" height="16" rx="2" fill="#8a6b3f"></rect>
+            <rect x="-8" y="-3" width="9" height="6" rx="2" fill="#6b4f2a"></rect>
+          </g>
+        </g>
+      </g>
+
+      <!-- упавшие мечи: внешняя группа держит позицию, анимация падения — на внутренней -->
+      <g id="drop1" transform="translate(196 178) rotate(66)">
+        <g class="sw">
+          <rect x="0" y="-2.5" width="42" height="5" rx="2" fill="#c8d2e0"></rect>
+          <polygon points="42,-2.5 50,0 42,2.5" fill="#c8d2e0"></polygon>
+          <rect x="-4" y="-7" width="4" height="14" rx="2" fill="#8a6b3f"></rect>
+          <rect x="-11" y="-2.5" width="8" height="5" rx="2" fill="#6b4f2a"></rect>
+        </g>
+      </g>
+      <g id="drop2" transform="translate(226 176) rotate(74)">
+        <g class="sw">
+          <rect x="0" y="-2.5" width="42" height="5" rx="2" fill="#c8d2e0"></rect>
+          <polygon points="42,-2.5 50,0 42,2.5" fill="#c8d2e0"></polygon>
+          <rect x="-4" y="-7" width="4" height="14" rx="2" fill="#8a6b3f"></rect>
+          <rect x="-11" y="-2.5" width="8" height="5" rx="2" fill="#6b4f2a"></rect>
+        </g>
+      </g>
+
+      <!-- босс живой: жирный тролль, один глаз уже выколот в бою -->
+      <g id="bossAlive">
+        <rect x="408" y="172" width="18" height="26" rx="6" fill="#37543a"></rect>
+        <rect x="446" y="172" width="18" height="26" rx="6" fill="#37543a"></rect>
+        <ellipse cx="436" cy="122" rx="54" ry="60" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2.5"></ellipse>
+        <ellipse cx="436" cy="142" rx="30" ry="26" fill="#5d8a57"></ellipse>
+        <circle cx="436" cy="52" r="27" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2.5"></circle>
+        <polygon points="409,46 397,30 415,38" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2"></polygon>
+        <polygon points="463,46 475,30 457,38" fill="#4f7a4a" stroke="#6f9a6a" stroke-width="2"></polygon>
+        <polygon points="424,66 420,76 430,68" fill="#e8e4d5"></polygon>
+        <polygon points="448,66 452,76 442,68" fill="#e8e4d5"></polygon>
+        <circle cx="424" cy="48" r="6" fill="#e8e4d5"></circle>
+        <circle cx="426" cy="49" r="2.6" fill="#20242d"></circle>
+        <line x1="416" y1="41" x2="430" y2="45" stroke="#37543a" stroke-width="3" stroke-linecap="round"></line>
+        <!-- выколотый глаз -->
+        <line x1="443" y1="43" x2="453" y2="53" stroke="#a04040" stroke-width="3.5" stroke-linecap="round"></line>
+        <line x1="453" y1="43" x2="443" y2="53" stroke="#a04040" stroke-width="3.5" stroke-linecap="round"></line>
+        <g transform="translate(492 128) rotate(24)">
+          <rect x="-6" y="-40" width="13" height="58" rx="6" fill="#7a5a34"></rect>
+          <circle cx="0" cy="-44" r="13" fill="#8a6b3f"></circle>
+        </g>
+      </g>
+
+      <!-- босс мёртвый: туша на земле и лужа -->
+      <g id="bossDead">
+        <ellipse cx="452" cy="196" rx="86" ry="12" fill="#5c1f1f" opacity="0.85"></ellipse>
+        <circle cx="530" cy="190" r="5" fill="#7d2626"></circle>
+        <circle cx="368" cy="192" r="4" fill="#7d2626"></circle>
+        <circle cx="392" cy="186" r="3" fill="#7d2626"></circle>
+        <ellipse cx="452" cy="168" rx="60" ry="32" fill="#46683f" stroke="#5d8a57" stroke-width="2.5"></ellipse>
+        <circle cx="384" cy="176" r="24" fill="#46683f" stroke="#5d8a57" stroke-width="2.5"></circle>
+        <polygon points="372,192 366,200 378,196" fill="#e8e4d5"></polygon>
+        <line x1="374" y1="168" x2="384" y2="176" stroke="#20242d" stroke-width="3" stroke-linecap="round"></line>
+        <line x1="384" y1="168" x2="374" y2="176" stroke="#20242d" stroke-width="3" stroke-linecap="round"></line>
+        <line x1="390" y1="168" x2="400" y2="176" stroke="#a04040" stroke-width="3" stroke-linecap="round"></line>
+        <line x1="400" y1="168" x2="390" y2="176" stroke="#a04040" stroke-width="3" stroke-linecap="round"></line>
+        <rect x="382" y="184" width="10" height="8" rx="3" fill="#b06060"></rect>
+      </g>
+
+      <!-- брызги при добивании -->
+      <g id="burst" transform="translate(440 120)">
+        <circle class="p" r="5" fill="#b03434" style="--dx: -60px; --dy: -46px"></circle>
+        <circle class="p" r="4" fill="#c0392b" style="--dx: 44px; --dy: -60px"></circle>
+        <circle class="p" r="6" fill="#8d2828" style="--dx: -34px; --dy: -70px"></circle>
+        <circle class="p" r="3" fill="#c0392b" style="--dx: 66px; --dy: -30px"></circle>
+        <circle class="p" r="5" fill="#b03434" style="--dx: -72px; --dy: -12px"></circle>
+        <circle class="p" r="4" fill="#8d2828" style="--dx: 20px; --dy: -78px"></circle>
+        <circle class="p" r="3" fill="#b03434" style="--dx: 78px; --dy: -52px"></circle>
+        <circle class="p" r="5" fill="#c0392b" style="--dx: -18px; --dy: -84px"></circle>
+        <circle class="p" r="4" fill="#8d2828" style="--dx: 54px; --dy: 8px"></circle>
+        <circle class="p" r="3" fill="#b03434" style="--dx: -50px; --dy: 16px"></circle>
+      </g>
+
+      <!-- дух босса -->
+      <g id="ghost">
+        <g id="ghostBody">
+          <path d="M400 128
+                   a36 40 0 0 1 72 0
+                   l0 26
+                   q -9 12 -18 0 q -9 12 -18 0 q -9 12 -18 0 q -9 12 -18 0
+                   z"
+                fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></path>
+          <circle cx="436" cy="92" r="20" fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></circle>
+          <polygon points="427,104 424,111 431,106" fill="#eef9fc" opacity="0.9"></polygon>
+          <polygon points="445,104 448,111 441,106" fill="#eef9fc" opacity="0.9"></polygon>
+          <circle cx="428" cy="90" r="4" fill="#eef9fc" opacity="0.95"></circle>
+          <line x1="440" y1="86" x2="448" y2="94" stroke="#5c98a6" stroke-width="3" stroke-linecap="round"></line>
+          <line x1="448" y1="86" x2="440" y2="94" stroke="#5c98a6" stroke-width="3" stroke-linecap="round"></line>
+        </g>
+        <g id="gburst" transform="translate(436 110)">
+          <circle class="p" r="4" fill="#9fdbe8" style="--dx: -50px; --dy: -40px"></circle>
+          <circle class="p" r="3" fill="#cdeef5" style="--dx: 44px; --dy: -52px"></circle>
+          <circle class="p" r="5" fill="#9fdbe8" style="--dx: -26px; --dy: -64px"></circle>
+          <circle class="p" r="3" fill="#cdeef5" style="--dx: 60px; --dy: -20px"></circle>
+          <circle class="p" r="4" fill="#9fdbe8" style="--dx: 30px; --dy: -70px"></circle>
+          <circle class="p" r="3" fill="#cdeef5" style="--dx: -62px; --dy: -14px"></circle>
+        </g>
+      </g>
+    </svg>
   </div>
 
-  <div class="block">
-    <h2>Шаг 2. Что упало</h2>
-    <div class="split">
-      <div class="list" id="list" role="listbox" aria-label="Упавшие предметы"></div>
-      <div class="itempanel empty" id="itemPanel">Выберите предмет в списке.</div>
+  <!-- числа духа -->
+  <div class="block chainwrap hidden" id="chainBlock">
+    <div class="chain" id="chain"></div>
+    <div class="spinnote" id="spinNote"></div>
+    <div class="lane hidden" id="laneWrap">
+      <div class="cells" id="laneCells"></div>
+      <i class="mk" id="laneMark"></i>
+      <div class="under"><span>0</span><span>9999</span></div>
     </div>
-    <p class="note">Нажмите на строку — покажет свойства предмета и его
-    собственный сид. Этот же сид уедет вниз, в разбор по шагам.</p>
   </div>
 
-  <div class="block">
-    <h2>Шаг 3. Как предмет достают из числа</h2>
-    <p>Сид — это одно большое число. Его крутят по одному и тому же правилу, и
-    каждый оборот даёт маленькую долю от нуля до единицы. Доля работает как
-    стрелка: её прикладывают то к списку типов, то к полосе редкостей, то к шкале
-    урона — и снимают значение. Стрелка каждый раз одна и та же, линейки разные.
-    Правило не меняется никогда, поэтому одно и то же число всегда
-    разворачивается в один и тот же предмет.</p>
-    <div class="controls">
-      <div class="field">
-        <label for="itemSeed">Сид предмета — одно целое число, своё у каждого</label>
-        <input type="text" id="itemSeed" value="" spellcheck="false" autocomplete="off" placeholder="например 2463534242">
-      </div>
-      <button class="primary" id="nextBtn">Извлечь следующее свойство</button>
-      <button id="resetBtn">Сбросить</button>
-    </div>
-    <div class="drum" id="drum"></div>
-    <div class="steps" id="steps"></div>
-    <div id="doneLine"></div>
+  <!-- лут -->
+  <div class="cards hidden" id="cards"></div>
+  <div class="match hidden" id="matchLine"></div>
+
+  <!-- диалог -->
+  <div class="dlg" id="dlg">
+    <span class="who note" id="who">—</span>
+    <div class="say" id="say"></div>
+    <div class="btns" id="btns"></div>
   </div>
 
-  <hr class="sep">
+</div>
 
 <script>
 // ===== CORE START =====
-// Хеш строки в 32-битное число. xmur3.
-function xmur3(str) {
-  var h = 1779033703 ^ str.length;
-  for (var i = 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
-  }
-  return function () {
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    h ^= h >>> 16;
-    return h >>> 0;
-  };
+// Одна и та же крутка для всего: из числа делается следующее число от 0 до 9999.
+// Никакого случайного — только перемешивание разрядов.
+function spin(x) {
+  var h = (x ^ 2747636419) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 2654435769) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 2654435769) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return h % 10000;
 }
 
-// Поток долей 0..1 из одного 32-битного числа. mulberry32.
-// rnd.state() отдаёт текущее состояние — только чтобы показать его на экране.
-function mulberry32(a) {
-  function rnd() {
-    a |= 0;
-    a = (a + 0x6D2B79F5) | 0;
-    var t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  }
-  rnd.state = function () { return a >>> 0; };
-  return rnd;
-}
-
-var TYPES = ['клинок', 'топор', 'лук', 'арбалет', 'посох', 'кинжал', 'молот', 'серп'];
-var PREFIXES = [
-  'ржавый', 'походный', 'гвардейский', 'лунный', 'воронёный', 'кривой',
-  'литой', 'старый', 'клеймёный', 'пепельный', 'ледяной', 'княжий'
-];
-var RARITIES = ['обычное', 'необычное', 'редкое', 'эпическое', 'легендарное'];
-var RARITIES_OF = ['обычного', 'необычного', 'редкого', 'эпического', 'легендарного'];
-var RARITY_WEIGHTS = [55, 25, 13, 6, 1];
-var PRICE_MULT = [1, 1.8, 3.2, 6, 12];
-
-// Сид предмета: хеш от сида мира и порядкового номера.
-function childSeed(worldSeed, index) {
-  return xmur3(worldSeed + '#' + index)();
-}
-
-function pickRarity(u) {
-  var acc = 0;
-  for (var i = 0; i < RARITY_WEIGHTS.length; i++) {
-    acc += RARITY_WEIGHTS[i] / 100;
-    if (u < acc) return i;
-  }
-  return RARITY_WEIGHTS.length - 1;
-}
-
-var ORD = [
-  'первое', 'второе', 'третье', 'четвёртое', 'пятое', 'шестое',
-  'седьмое', 'восьмое', 'девятое', 'десятое', 'одиннадцатое', 'двенадцатое'
-];
-
-// Порядок извлечения. run считает свойство и отдаёт то, что видно в строке;
-// explain описывает линейку, к которой на этом обороте прикладывали стрелку.
-// Один и тот же список крутит и панель предмета, и пошаговый разбор.
-var STEPS = [
-  {
-    name: 'тип',
-    run: function (u, it) {
-      it.type = Math.floor(u * TYPES.length);
-      return TYPES[it.type];
-    },
-    explain: function (u, it) {
-      return {
-        phrase: 'метка попала в отсек «' + TYPES[it.type] + '»',
-        lane: { kind: 'cells', items: TYPES, lit: it.type, mark: u }
-      };
-    }
-  },
-  {
-    name: 'редкость',
-    run: function (u, it) {
-      it.rarity = pickRarity(u);
-      return RARITIES[it.rarity];
-    },
-    explain: function (u, it) {
-      var w = RARITY_WEIGHTS[it.rarity];
-      var last = RARITY_WEIGHTS.length - 1;
-      return {
-        phrase: it.rarity === last
-          ? 'легендарному отведён один процент полосы, и метка попала ровно в него'
-          : 'метка встала в кусок «' + RARITIES[it.rarity] + '», ему отведено ' + w +
-            ' из ста; легендарному — один, и метка в него не попала',
-        lane: { kind: 'bands', lit: it.rarity, mark: u }
-      };
-    }
-  },
-  {
-    name: 'название',
-    run: function (u, it) {
-      it.prefix = Math.floor(u * PREFIXES.length);
-      it.name = PREFIXES[it.prefix] + ' ' + TYPES[it.type];
-      return it.name;
-    },
-    explain: function (u, it) {
-      return {
-        phrase: 'метка указала на ' + ORD[it.prefix] + ' прозвище из двенадцати, а тип уже был — вышел ' + it.name,
-        lane: { kind: 'names', items: PREFIXES, lit: it.prefix }
-      };
-    }
-  },
-  {
-    name: 'урон',
-    run: function (u, it) {
-      it.damage = 3 + Math.floor(u * 10) + it.rarity * 6;
-      return String(it.damage);
-    },
-    explain: function (u, it) {
-      var bonus = it.rarity * 6;
-      return {
-        phrase: 'у ' + RARITIES_OF[it.rarity] + ' шкала урона идёт от ' + (3 + bonus) +
-                ' до ' + (12 + bonus) + ', метка встала на ' + it.damage,
-        lane: { kind: 'scale', lo: String(3 + bonus), hi: String(12 + bonus), value: String(it.damage), mark: u }
-      };
-    }
-  },
-  {
-    name: 'вес',
-    run: function (u, it) {
-      it.weightTenths = Math.round(4 + u * 46);
-      it.weight = it.weightTenths / 10;
-      return it.weight.toFixed(1) + ' кг';
-    },
-    explain: function (u, it) {
-      return {
-        phrase: 'шкала веса идёт от 0.4 до 5.0 килограмма, метка встала на ' + it.weight.toFixed(1),
-        lane: { kind: 'scale', lo: '0.4', hi: '5.0', value: it.weight.toFixed(1) + ' кг', mark: u }
-      };
-    }
-  },
-  {
-    name: 'цена',
-    run: function (u, it) {
-      it.price = Math.floor((8 + u * 60) * PRICE_MULT[it.rarity]);
-      return String(it.price);
-    },
-    explain: function (u, it) {
-      var lo = Math.floor(8 * PRICE_MULT[it.rarity]);
-      var hi = Math.floor(68 * PRICE_MULT[it.rarity]);
-      return {
-        phrase: 'у ' + RARITIES_OF[it.rarity] + ' цена лежит между ' + lo + ' и ' + hi +
-                ', метка встала на ' + it.price,
-        lane: { kind: 'scale', lo: String(lo), hi: String(hi), value: String(it.price), mark: u }
-      };
-    }
-  }
-];
-
-// Свойства предмета выводятся только из его собственного сида.
-function makeItem(seed) {
-  var s = seed >>> 0;
-  var rnd = mulberry32(s);
-  var it = { seed: s };
-  for (var i = 0; i < STEPS.length; i++) STEPS[i].run(rnd(), it);
-  return it;
-}
-
-function dropItems(worldSeed, count) {
-  var out = [];
-  for (var i = 0; i < count; i++) out.push(makeItem(childSeed(worldSeed, i)));
+// Цепочка: каждое следующее число выкручено из предыдущего.
+function chain(seed, k) {
+  var out = [], x = seed >>> 0;
+  for (var i = 0; i < k; i++) { x = spin(x); out.push(x); }
   return out;
 }
 
-// Отпечаток набора — только для сравнения двух бросков между собой.
-function fingerprint(items) {
-  var parts = [];
-  for (var i = 0; i < items.length; i++) {
-    var it = items[i];
-    parts.push([it.seed, it.type, it.rarity, it.prefix, it.damage, it.weightTenths, it.price].join(','));
-  }
-  return parts.join(';');
+var SEED = 234236291;
+
+var TYPES = ['лом', 'меч', 'щит', 'серп', 'лук', 'цеп', 'кол', 'коса', 'багор', 'топор'];
+var PREFIXES = ['ржавый', 'кривой', 'тупой', 'гнутый', 'унылый', 'поганый', 'дырявый', 'косой', 'трухлявый', 'обшарпанный'];
+var RARITIES = ['обычный', 'необычный', 'редкий', 'эпический', 'легендарный'];
+
+// Полоса 0..9999 нарезана на десять отсеков по тысяче — какой отсек, такой тип.
+function bucket(n) { return Math.floor(n / 1000); }
+
+function rarityOf(n) {
+  if (n < 6000) return 0;
+  if (n < 8500) return 1;
+  if (n < 9600) return 2;
+  if (n < 9900) return 3;
+  return 4;
 }
 
-// Пошаговое извлечение: те же STEPS, но по одному обороту за нажатие.
-function makeExtractor(seed) {
-  var s = seed >>> 0;
-  var rnd = mulberry32(s);
-  var it = { seed: s };
-  var done = [];
+// Число, делённое на тысячу, — и есть значение свойства. Без вранья и без округлений.
+function fmt(n) { return (n / 1000).toFixed(3); }
+
+// Весь предмет — из шести оборотов одного числа.
+function makeItem(seed) {
+  var c = chain(seed, 6);
   return {
-    seed: s,
-    item: it,
-    results: done,
-    state: function () { return rnd.state(); },
-    finished: function () { return done.length >= STEPS.length; },
-    next: function () {
-      if (done.length >= STEPS.length) return null;
-      var step = STEPS[done.length];
-      var u = rnd();
-      var value = step.run(u, it);
-      var ex = step.explain(u, it);
-      var rec = { name: step.name, u: u, value: value, phrase: ex.phrase, lane: ex.lane };
-      done.push(rec);
-      return rec;
-    }
+    numbers: c,
+    type: bucket(c[0]),
+    damage: fmt(c[1]),
+    speed: fmt(c[2]),
+    prefix: bucket(c[3]),
+    weight: fmt(c[4]),
+    rarity: rarityOf(c[5])
   };
 }
 // ===== CORE END =====
 
 (function () {
-  var COUNT = 100;
-
   var $ = function (id) { return document.getElementById(id); };
-  var worldInput = $('worldSeed');
-  var itemInput = $('itemSeed');
-  var listEl = $('list');
-  var panelEl = $('itemPanel');
-  var detEl = $('determinism');
-  var drumEl = $('drum');
-  var stepsEl = $('steps');
-  var doneEl = $('doneLine');
-  var nextBtn = $('nextBtn');
+  var stage = $('stage');
+  var chainBlock = $('chainBlock');
+  var chainEl = $('chain');
+  var spinNote = $('spinNote');
+  var laneWrap = $('laneWrap');
+  var laneCells = $('laneCells');
+  var laneMark = $('laneMark');
+  var cardsEl = $('cards');
+  var matchEl = $('matchLine');
+  var dlgEl = $('dlg');
+  var whoEl = $('who');
+  var sayEl = $('say');
+  var btnsEl = $('btns');
 
-  var items = [];
-  var history = Object.create(null);
-  var selected = -1;
-  var ex = null;
-  var openStep = -1;    // раскрыта всегда одна линейка — текущая
-  var shownState = null; // чтобы подсветить число только когда оно сменилось
-
-  function plural(n, one, few, many) {
-    var n10 = n % 10, n100 = n % 100;
-    if (n10 === 1 && n100 !== 11) return one;
-    if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return few;
-    return many;
-  }
+  var IT = makeItem(SEED);
+  var C = IT.numbers;
+  var MISS = 2000 - C[0]; // сколько не добрал до отсека щита
+  var PREF = PREFIXES[IT.prefix];
+  var NAME = PREF.charAt(0).toUpperCase() + PREF.slice(1) + ' ' + TYPES[IT.type];
 
   function esc(s) {
     return String(s).replace(/[&<>]/g, function (c) {
@@ -839,250 +593,276 @@ function makeExtractor(seed) {
     });
   }
 
-  // ——— список ———
+  // закорючка-функция между числами: та самая, которую игрок не понял
+  var SQ = '<svg class="fn" viewBox="0 0 34 16" aria-hidden="true">' +
+    '<path d="M2 8 C 5 1, 9 15, 13 8 S 19 1, 22 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+    '<path d="M24 8 L30 8 M30 8 L27 5.4 M30 8 L27 10.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+    '</svg>';
 
-  function renderList() {
-    var frag = document.createDocumentFragment();
-    for (var i = 0; i < items.length; i++) {
-      var it = items[i];
-      var row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'row r' + it.rarity;
-      row.dataset.i = String(i);
-      row.innerHTML =
-        '<span class="num">' + (i + 1) + '</span>' +
-        '<span class="nm">' + esc(it.name) + '</span>' +
-        '<span class="rar">' + RARITIES[it.rarity] + '</span>';
-      frag.appendChild(row);
-    }
-    listEl.innerHTML = '';
-    listEl.appendChild(frag);
+  // ——— состояние ———
+
+  var st;
+  function freshState() {
+    return {
+      i: 0,
+      lock: false,
+      shown: 0,       // сколько чисел цепочки видно (0 = только сид ещё не показан)
+      seedShown: false,
+      dangling: false, // закорючка показана, но результата ещё нет
+      spins: 0,
+      revealed: {},
+      card2: false
+    };
   }
 
-  function renderPanel(item, index) {
-    if (!item) {
-      panelEl.className = 'itempanel empty';
-      panelEl.textContent = 'Выберите предмет в списке.';
-      return;
-    }
-    panelEl.className = 'itempanel r' + item.rarity;
-    panelEl.innerHTML =
-      '<div class="cname">' + esc(item.name) + '</div>' +
-      '<div class="crar">' + RARITIES[item.rarity] + ' · предмет №' + (index + 1) + '</div>' +
-      '<dl class="rows">' +
-        '<dt>тип</dt><dd>' + TYPES[item.type] + '</dd>' +
-        '<dt>урон</dt><dd>' + item.damage + '</dd>' +
-        '<dt>вес</dt><dd>' + item.weight.toFixed(1) + ' кг</dd>' +
-        '<dt>цена</dt><dd>' + item.price + '</dd>' +
-      '</dl>' +
-      '<div class="seedline">сид предмета <b>' + item.seed + '</b></div>';
-  }
+  // ——— цепочка ———
 
-  function select(i) {
-    var prev = listEl.querySelector('.row.sel');
-    if (prev) prev.classList.remove('sel');
-    selected = i;
-    var row = listEl.children[i];
-    if (row) row.classList.add('sel');
-    renderPanel(items[i], i);
-    itemInput.value = String(items[i].seed);
-    resetExtractor();
-  }
-
-  // ——— разбор по шагам ———
-
-  function currentSeed() {
-    var raw = itemInput.value.trim();
-    if (raw.length === 0) return null;
-    if (/^\d+$/.test(raw)) return (Number(raw) % 4294967296) >>> 0;
-    return xmur3(raw)();
-  }
-
-  function resetExtractor() {
-    var seed = currentSeed();
-    ex = seed === null ? null : makeExtractor(seed);
-    openStep = -1;
-    shownState = null;
-    renderSteps();
-  }
-
-  // метка не должна вылезать за края блока, а подпись у метки — за края строки
-  function at(u) { return (u * 100).toFixed(2) + '%'; }
-  function label(u) { return 'left: clamp(1.6rem, ' + at(u) + ', calc(100% - 1.6rem))'; }
-
-  // стрелка: одна и та же полоса от нуля до единицы
-  function renderArrow(u) {
-    return '' +
-      '<div class="over"><span class="vl" style="' + label(u) + '">' + u.toFixed(4) + '</span></div>' +
-      '<div class="bar"><i class="mk" style="left:' + at(u) + '"></i></div>' +
-      '<div class="under"><span class="lo">0</span><span class="hi">1</span></div>';
-  }
-
-  // линейка, к которой стрелку приложили на этом обороте
-  function renderLane(lane) {
-    var html = '', i;
-
-    if (lane.kind === 'cells') {
-      html = '<div class="cells" style="grid-template-columns:repeat(' + lane.items.length + ',1fr)">';
-      for (i = 0; i < lane.items.length; i++) {
-        html += '<span class="c' + (i === lane.lit ? ' lit' : '') + '">' + esc(lane.items[i]) + '</span>';
-      }
-      html += '</div><i class="mk" style="left:' + at(lane.mark) + '"></i>';
-
-    } else if (lane.kind === 'names') {
-      html = '<div class="cells names">';
-      for (i = 0; i < lane.items.length; i++) {
-        html += '<span class="c' + (i === lane.lit ? ' lit' : '') + '">' + esc(lane.items[i]) + '</span>';
-      }
-      html += '</div>';
-
-    } else if (lane.kind === 'bands') {
-      html = '<div class="bands">';
-      for (i = 0; i < RARITY_WEIGHTS.length; i++) {
-        var w = RARITY_WEIGHTS[i];
-        html += '<span class="b r' + i + (i === lane.lit ? ' lit' : '') + '" style="flex:' + w + ' 0 0">' +
-                (w >= 10 ? w : '') + '</span>';
-      }
-      html += '</div><i class="mk" style="left:' + at(lane.mark) + '"></i>';
-
-    } else if (lane.kind === 'scale') {
-      html =
-        '<div class="over"><span class="vl" style="' + label(lane.mark) + '">' + esc(lane.value) + '</span></div>' +
-        '<div class="bar"><i class="mk" style="left:' + at(lane.mark) + '"></i></div>' +
-        '<div class="under">' +
-          '<span class="lo">' + esc(lane.lo) + '</span>' +
-          '<span class="hi">' + esc(lane.hi) + '</span>' +
-        '</div>';
-    }
-
-    return '<div class="lane">' + html + '</div>';
-  }
-
-  function renderSteps() {
-    if (!ex) {
-      drumEl.innerHTML = '<span class="lbl">число</span><span class="hint">введите сид предмета или нажмите строку в списке</span>';
-      stepsEl.innerHTML = '';
-      doneEl.innerHTML = '';
-      nextBtn.disabled = true;
-      shownState = null;
-      return;
-    }
-
-    var st = ex.state();
-    drumEl.innerHTML =
-      '<span class="lbl">число</span>' +
-      '<span class="now' + (shownState !== null && shownState !== st ? ' flash' : '') + '">' + st + '</span>' +
-      '<span class="hint">извлечено ' + ex.results.length + ' из ' + STEPS.length + '</span>';
-    shownState = st;
-
+  function renderChain(freshIdx, freshFn) {
     var html = '';
-    for (var i = 0; i < STEPS.length; i++) {
-      var r = ex.results[i];
-      if (!r) {
-        html +=
-          '<div class="step closed"><div class="head">' +
-          '<span class="who">' + STEPS[i].name + '</span>' +
-          '<span class="what">— — —</span>' +
-          '<span class="chev"></span></div></div>';
-        continue;
-      }
-      var open = i === openStep;
-      html +=
-        '<div class="step' + (open ? ' fresh' : '') + '">' +
-          '<button type="button" class="head" data-i="' + i + '" aria-expanded="' + open + '">' +
-            '<span class="who">' + r.name + '</span>' +
-            '<span class="what">' + esc(r.value) + '</span>' +
-            '<span class="chev">›</span>' +
-          '</button>' +
-          (open
-            ? '<div class="body">' + renderArrow(r.u) + renderLane(r.lane) +
-              '<div class="phrase">' + esc(r.phrase) + '</div></div>'
-            : '') +
-        '</div>';
+    if (st.seedShown) html += '<span class="tok seed">' + SEED + '</span>';
+    for (var k = 0; k < st.shown; k++) {
+      html += SQ + '<span class="tok' + (k === freshIdx ? ' fresh' : '') + '">' + C[k] + '</span>';
     }
-    stepsEl.innerHTML = html;
-
-    nextBtn.disabled = ex.finished();
-    doneEl.innerHTML = ex.finished()
-      ? '<div class="done">Предмет собран целиком. Всё, что у него есть, получено из одного числа — ' +
-        ex.seed + '. Ни одно из этих значений нигде не хранилось.</div>'
-      : '';
+    if (st.dangling) html += SQ;
+    chainEl.innerHTML = html;
+    if (freshFn || st.dangling) {
+      var fns = chainEl.querySelectorAll('.fn');
+      if (fns.length) fns[fns.length - 1].classList.add('fresh');
+    }
   }
 
-  // ——— бросок ———
+  function showLane() {
+    var html = '';
+    for (var i = 0; i < TYPES.length; i++) {
+      html += '<span class="c' + (i === IT.type ? ' lit' : '') + '" data-b="' + i + '">' + TYPES[i] + '</span>';
+    }
+    laneCells.innerHTML = html;
+    laneMark.style.left = (C[0] / 10000 * 100).toFixed(2) + '%';
+    laneWrap.classList.remove('hidden');
+  }
 
-  function drop() {
-    var seedText = worldInput.value;
-    if (seedText.length === 0) { seedText = '0'; worldInput.value = seedText; }
+  function peekShield() {
+    var c = laneCells.querySelector('[data-b="2"]');
+    if (c) { c.classList.remove('peek'); void c.offsetWidth; c.classList.add('peek'); }
+  }
 
-    items = dropItems(seedText, COUNT);
-    selected = -1;
-    renderList();
-    renderPanel(null);
+  // ——— карточки ———
 
-    var print = fingerprint(items);
-    var rec = history[seedText];
-    if (!rec) {
-      history[seedText] = { count: 1, print: print };
-      detEl.className = 'determinism';
-      detEl.textContent = 'Сид «' + seedText + '» уронили первый раз. Нажмите ещё раз с тем же сидом — список должен выйти тот же.';
+  function q(v, key) { return st.revealed[key] ? v : '???'; }
+
+  function cardHtml(idx, fresh) {
+    var known = st.revealed.name;
+    return '<div class="card' + (known ? ' r' + IT.rarity : '') + '">' +
+      '<div class="cname">' + (known ? esc(NAME) : '??? меч') + '</div>' +
+      '<div class="crar">' + q(RARITIES[IT.rarity], 'rar') + ' · добыча №' + idx + '</div>' +
+      '<dl class="rows">' +
+        '<dt>урон</dt><dd' + (fresh === 'dmg' ? ' class="reveal"' : '') + '>' + q(IT.damage, 'dmg') + '</dd>' +
+        '<dt>скорость</dt><dd' + (fresh === 'spd' ? ' class="reveal"' : '') + '>' + q(IT.speed, 'spd') + '</dd>' +
+        '<dt>вес</dt><dd' + (fresh === 'wt' ? ' class="reveal"' : '') + '>' + q(IT.weight + ' кг', 'wt') + '</dd>' +
+      '</dl>' +
+      '<div class="seedline">выведен из числа <b>' + SEED + '</b></div>' +
+    '</div>';
+  }
+
+  function renderCards(fresh) {
+    var html = cardHtml(1, fresh);
+    if (st.card2) html += cardHtml(2, null);
+    cardsEl.innerHTML = html;
+    cardsEl.classList.remove('hidden');
+  }
+
+  function reveal(key, fresh) {
+    st.revealed[key] = true;
+    renderCards(fresh);
+  }
+
+  // ——— сцена ———
+
+  function killAnim() {
+    stage.classList.add('killed');
+    var b = $('burst');
+    b.classList.remove('go'); void b.getBoundingClientRect(); b.classList.add('go');
+  }
+
+  function rekillAnim() {
+    stage.classList.add('flinch');
+    var b = $('gburst');
+    b.classList.remove('go'); void b.getBoundingClientRect(); b.classList.add('go');
+    setTimeout(function () { stage.classList.remove('flinch'); }, 700);
+  }
+
+  // ——— сценарий ———
+  // w: кто говорит (p — игрок, g — дух, n — ремарка); fx — что происходит на экране.
+
+  var L = [
+    { w: 'n', t: 'Босс почти готов.', btn: 'kill' },
+    { w: 'g', t: 'Вот твой лут. ' + SEED + '.', fx: function () {
+        st.seedShown = true; chainBlock.classList.remove('hidden'); renderChain(-1, false);
+      } },
+    { w: 'p', t: 'Че???' },
+    { w: 'g', t: 'Ну лут. Выведи из него, что там в нём.' },
+    { w: 'p', t: 'Дай мне мой лут, или я найду способ тебя ещё раз прикончить.' },
+    { w: 'g', t: 'Ладно, вот функция, как вывести лут из этого числа.', fx: function () {
+        st.dangling = true; renderChain(-1, true);
+      } },
+    { w: 'p', t: 'ЧЕГО БЛЯТЬ?' },
+    { w: 'g', t: 'Ладно, давай сделаем вид, что ты понимаешь эту часть.' },
+    { w: 'p', t: 'Я тебя серьёзно ещё раз убью сейчас.' },
+    { w: 'g', t: 'Ох. Ну вот я дал тебе число, дал функцию. Применяешь функцию к числу — получаешь другое число.' },
+    { w: 'p', t: 'Какие блять числа, где мой меч, или щит, или что ты там в своей жопе прятал?' },
+    { w: 'g', t: 'Ну смотри. Функция эта одно число превращает в другое.' },
+    { w: 'p', t: 'Я смотрю, тебе не терпится снова, да? Превратиться из жирного тролля в какое-то бестелесное нумерологическое создание блять?' },
+    { w: 'g', t: 'Смотри: число моё. Применил функцию — получил другое число.', fx: function () {
+        st.dangling = false; st.shown = 1; renderChain(0, false);
+      } },
+    { w: 'p', t: 'У тебя было два глаза. Я тебе выколол один. Ты ощутил разницу, а?' },
+    { w: 'g', t: '...Грубо. Но, в общем, да. Именно так.' },
+    { w: 'g', t: 'Смотри: твоё новое число больше тысячи, но меньше двух тысяч — ЭТО МЕЧ! Представляешь?', fx: showLane },
+    { w: 'p', t: '...а от двух тысяч до трёх что?' },
+    { w: 'g', t: 'Щит.', fx: peekShield },
+    { w: 'p', t: 'БЛЯТЬ. Сильно не добрал?' },
+    { w: 'g', t: 'На ' + MISS + '.' },
+    { w: 'p', t: 'ПЕРЕКРУТИ.', btn: 'spin' },
+    { w: 'g', t: 'Накрутился? Число одно. Крутится одинаково. Бери меч.' },
+    { w: 'g', t: 'Та бери, бери.', fx: function () {
+        stage.classList.add('hasSword1'); renderCards(null);
+      } },
+    { w: 'p', t: 'Этот меч такой же бесполезный, как и ты, да? СКОЛЬКО УРОНА У НЕГО????' },
+    { w: 'g', t: 'А вот тут интересно. Урон мы сейчас ВЫВЕДЕМ ТОЙ ЖЕ ФУНКЦИЕЙ, ПРИКИНЬ.' },
+    { w: 'g', t: 'Если скрестить призрака и бомбу из ежа, что выведется — знаешь?' },
+    { w: 'g', t: 'Смотри-смотри: берём твоё новое число и крутим ещё раз. Выпало ' + C[1] + '. Делим на тысячу — вот твой урон.', fx: function () {
+        st.shown = 2; renderChain(1, false); reveal('dmg', 'dmg');
+      } },
+    { w: 'p', t: IT.damage + '?! Что за урон — ' + IT.damage + '?!' },
+    { w: 'g', t: 'Честный.' },
+    { w: 'p', t: 'СКОРОСТЬ АТАКИ СКОЛЬКО? И знаешь что — дай мне на этот раз число ПОБОЛЬШЕ. Чтоб скорость побольше.' },
+    { w: 'g', t: 'Число побольше — это не лут пожирнее. Это другой лут. Целиком. Вот из соседнего числа, на единицу больше твоего, выпадает серп. Кривой.' },
+    { w: 'p', t: 'Почему кривой?!' },
+    { w: 'g', t: 'Потому что число такое. Не я придумал. Я вообще уже умер.', fx: function () {
+        st.shown = 3; renderChain(2, false); reveal('spd', 'spd');
+      } },
+    { w: 'p', t: 'Ладно. Показывай, что ещё у тебя есть.' },
+    { w: 'g', t: 'Кручу дальше.', fx: function () {
+        st.lock = true;
+        setTimeout(function () { st.shown = 4; renderChain(3, false); reveal('name', null); }, 150);
+        setTimeout(function () { st.shown = 5; renderChain(4, false); reveal('wt', 'wt'); }, 700);
+        setTimeout(function () { st.shown = 6; renderChain(5, false); reveal('rar', null); st.lock = false; }, 1250);
+      } },
+    { w: 'p', t: '«' + PREF.charAt(0).toUpperCase() + PREF.slice(1) + '»?! Это ты сейчас про меч или про меня?' },
+    { w: 'g', t: 'Число решило. Я тут никто.' },
+    /* [слот: бит про хранение — вставить, когда автор пришлёт] */
+    { w: 'p', t: 'Так. Последний вопрос. А если я тебя убью ещё раз?' },
+    { w: 'g', t: 'Получишь то же число.' },
+    { w: 'p', t: 'И тот же ' + PREF + ' меч с уроном ' + IT.damage + '?' },
+    { w: 'g', t: 'И тот же ' + PREF + ' меч. Я, знаешь ли, не рандомный. Я — ' + SEED + '. Хоть сто раз меня убей.' },
+    { w: 'n', t: 'Игрок заносит меч.', fx: function () { stage.classList.add('raised'); } },
+    { w: 'g', t: 'НУ ПОПРОБУЙ.', btn: 'rekill' },
+    { w: 'g', t: 'Ну что, доволен? Два одинаковых меча. Коллекционер блять.' },
+    { w: 'n', t: 'Всё, что есть у меча, вывелось из одного числа. Нигде ничего не лежало.', btn: 'restart' }
+  ];
+
+  // ——— движок диалога ———
+
+  function btn(label, cls, onClick) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.textContent = label;
+    b.addEventListener('click', function (e) { e.stopPropagation(); onClick(); });
+    return b;
+  }
+
+  function render() {
+    var s = L[st.i];
+    whoEl.className = 'who ' + (s.w === 'p' ? 'hero' : s.w === 'g' ? 'ghost' : 'note');
+    whoEl.textContent = s.w === 'p' ? 'Игрок' : s.w === 'g' ? 'Дух босса' : '—';
+    sayEl.className = 'say' + (s.w === 'n' ? ' note' : '');
+    sayEl.textContent = s.t;
+    btnsEl.innerHTML = '';
+
+    if (s.btn === 'kill') {
+      btnsEl.appendChild(btn('ДОБИТЬ', 'kill', function () {
+        if (st.lock) return;
+        st.lock = true;
+        killAnim();
+        setTimeout(function () { st.lock = false; next(); }, 1000);
+      }));
+    } else if (s.btn === 'spin') {
+      btnsEl.appendChild(btn('КРУТАНУТЬ ЕЩЁ РАЗ', '', function () {
+        st.spins++;
+        renderChain(0, true);
+        spinNote.textContent = st.spins === 1
+          ? 'выпало ' + C[0] + '. опять.'
+          : 'выпало ' + C[0] + '. опять. (' + st.spins + '-й раз)';
+        if (st.spins === 1) btnsEl.appendChild(btn('дальше ▸', 'next', next));
+      }));
+    } else if (s.btn === 'rekill') {
+      btnsEl.appendChild(btn('УБИТЬ ЕЩЁ РАЗ', 'kill', function () {
+        if (st.lock) return;
+        st.lock = true;
+        rekillAnim();
+        // та же цепочка пробегает заново — числа те же, предмет тот же
+        for (var k = 0; k < C.length; k++) {
+          (function (k) {
+            setTimeout(function () { renderChain(k, false); }, 350 + k * 260);
+          })(k);
+        }
+        setTimeout(function () {
+          st.card2 = true;
+          renderCards(null);
+          stage.classList.add('hasSword2');
+          matchEl.textContent = 'Совпал. Предмет в предмет.';
+          matchEl.classList.remove('hidden');
+          st.lock = false;
+          next();
+        }, 350 + C.length * 260 + 500);
+      }));
+    } else if (s.btn === 'restart') {
+      btnsEl.appendChild(btn('СНАЧАЛА ▸', '', reset));
     } else {
-      rec.count++;
-      if (rec.print === print) {
-        detEl.className = 'determinism match';
-        detEl.textContent = 'Сид «' + seedText + '» роняли ' + rec.count + ' ' +
-          plural(rec.count, 'раз', 'раза', 'раз') + ' — список каждый раз выходил один и тот же, предмет за предметом.';
-      } else {
-        detEl.className = 'determinism mismatch';
-        detEl.textContent = 'Сид «' + seedText + '»: список разошёлся.';
-      }
+      btnsEl.appendChild(btn('дальше ▸', 'next', next));
     }
   }
 
-  listEl.addEventListener('click', function (e) {
-    var row = e.target.closest('.row');
-    if (!row) return;
-    select(Number(row.dataset.i));
+  function next() {
+    if (st.lock) return;
+    if (st.i >= L.length - 1) return;
+    st.i++;
+    var s = L[st.i];
+    if (s.fx) s.fx();
+    render();
+  }
+
+  function reset() {
+    st = freshState();
+    stage.classList.remove('killed', 'raised', 'hasSword1', 'hasSword2', 'flinch');
+    $('burst').classList.remove('go');
+    $('gburst').classList.remove('go');
+    chainBlock.classList.add('hidden');
+    laneWrap.classList.add('hidden');
+    chainEl.innerHTML = '';
+    spinNote.textContent = '';
+    cardsEl.classList.add('hidden');
+    cardsEl.innerHTML = '';
+    matchEl.classList.add('hidden');
+    render();
+  }
+
+  // клик по коробке диалога листает обычные реплики
+  dlgEl.addEventListener('click', function () {
+    var s = L[st.i];
+    if (!s.btn) next();
   });
 
-  $('dropBtn').addEventListener('click', drop);
-  $('randBtn').addEventListener('click', function () {
-    worldInput.value = String(Math.floor(Math.random() * 4294967296));
-    drop();
-  });
-  $('resetBtn').addEventListener('click', resetExtractor);
-  nextBtn.addEventListener('click', function () {
-    if (!ex) return;
-    ex.next();
-    openStep = ex.results.length - 1;
-    renderSteps();
-  });
-
-  // пересмотреть уже извлечённое: раскрывается одна линейка, остальные сворачиваются
-  stepsEl.addEventListener('click', function (e) {
-    var head = e.target.closest('button.head');
-    if (!head) return;
-    var i = Number(head.dataset.i);
-    openStep = openStep === i ? -1 : i;
-    renderSteps();
-  });
-
-  worldInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') drop(); });
-  itemInput.addEventListener('input', function () {
-    // сид правят руками — выделенная строка больше не про это число
-    if (selected >= 0 && items[selected] && items[selected].seed !== currentSeed()) {
-      var row = listEl.querySelector('.row.sel');
-      if (row) row.classList.remove('sel');
-      selected = -1;
-      renderPanel(null);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      var s = L[st.i];
+      if (!s.btn) { e.preventDefault(); next(); }
     }
-    resetExtractor();
   });
 
-  drop();
-  resetExtractor();
+  reset();
 })();
 </script>
-</div>
 </body>
 </html>
