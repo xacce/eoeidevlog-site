@@ -50,7 +50,7 @@
     overflow: hidden;
   }
 
-  /* верхняя панель: числа духа */
+  /* верхняя панель: числа духа, каждый предмет крутится на своей строке */
 
   .hud {
     padding: 0.6rem 0.8rem;
@@ -60,10 +60,16 @@
 
   .chain {
     display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-family: var(--mono);
+  }
+
+  .chainrow {
+    display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.25rem 0.3rem;
-    font-family: var(--mono);
   }
 
   .tok {
@@ -77,6 +83,10 @@
   }
 
   .tok.seed { color: var(--text); }
+
+  /* перенос числа с прошлой строки: с него продолжается крутка */
+  .tok.carry { color: var(--dim-2); border-style: dashed; }
+
   .tok.fresh { animation: catch 0.9s ease-out; }
 
   @keyframes catch {
@@ -253,13 +263,14 @@
 
   .scene svg { display: block; width: 100%; height: auto; max-width: 100%; }
 
-  #bossDead, #ghost, #drop1, #drop2 { display: none; }
+  #bossDead, #ghost, #drop1, #drop2, #dropEye { display: none; }
   .killed #bossAlive { display: none; }
   .killed #bossDead { display: block; }
   .killed #ghost { display: block; animation: rise 0.9s ease-out; }
   .hasSword1 #drop1 { display: block; }
   .hasSword2 #drop2 { display: block; }
-  .hasSword1 #drop1 .sw, .hasSword2 #drop2 .sw { animation: plop 0.5s ease-out; }
+  .hasEye #dropEye { display: block; }
+  .hasSword1 #drop1 .sw, .hasSword2 #drop2 .sw, .hasEye #dropEye .sw { animation: plop 0.5s ease-out; }
 
   #ghostBody { animation: floaty 2.6s ease-in-out infinite; }
   .flinch #ghostBody { animation: flinch 0.6s ease-out, floaty 2.6s 0.6s ease-in-out infinite; }
@@ -376,7 +387,7 @@
 
   @media (max-width: 420px) {
     .bubble { font-size: 0.91rem; max-width: 94%; }
-    .talk { padding: 0.7rem 0.6rem 0.2rem; }
+    .talk { padding: 0.7rem 0.6rem 0; }
     .hud, .loot { padding-left: 0.6rem; padding-right: 0.6rem; }
   }
 </style>
@@ -443,6 +454,17 @@
             <polygon points="42,-2.5 50,0 42,2.5" fill="#c8d2e0"></polygon>
             <rect x="-4" y="-7" width="4" height="14" rx="2" fill="#8a6b3f"></rect>
             <rect x="-11" y="-2.5" width="8" height="5" rx="2" fill="#6b4f2a"></rect>
+          </g>
+        </g>
+
+        <!-- глаз тролля: мусорный дроп, не из числа -->
+        <g id="dropEye" transform="translate(258 194)">
+          <g class="sw">
+            <path d="M6 -2 q 7 -3 10 1" stroke="#a04040" stroke-width="1.6" fill="none" stroke-linecap="round"></path>
+            <circle r="7" fill="#e8e4d5" stroke="#c9c3af" stroke-width="1"></circle>
+            <circle cx="-2" cy="-1" r="3.2" fill="#5a7a3d"></circle>
+            <circle cx="-2.8" cy="-1.8" r="1.3" fill="#20242d"></circle>
+            <path d="M-6 3 q 3 3 7 2" stroke="#c98f8f" stroke-width="1" fill="none"></path>
           </g>
         </g>
       </g>
@@ -574,25 +596,20 @@ function itemName(prefixIdx, typeIdx) {
   return p.charAt(0).toUpperCase() + p.slice(1) + ' ' + TYPES[typeIdx];
 }
 
-// Весь лут босса — из восьми оборотов одного числа:
-// меч (тип, урон, скорость, имя) и ещё два предмета (тип + имя).
+// Весь лут босса — из восьми оборотов одного числа, по четыре на предмет:
+// тип, урон, скорость, прозвище. Меч — обороты 1-4, топор — 5-8.
 function makeLoot(seed) {
   var c = chain(seed, 8);
-  return {
-    numbers: c,
-    type: bucket(c[0]),
-    damage: fmt(c[1]),
-    speed: fmt(c[2]),
-    prefix: bucket(c[3]),
-    extra: [
-      { type: bucket(c[4]), prefix: bucket(c[5]) },
-      { type: bucket(c[6]), prefix: bucket(c[7]) }
-    ]
-  };
+  function item(o) {
+    return { type: bucket(c[o]), damage: fmt(c[o + 1]), speed: fmt(c[o + 2]), prefix: bucket(c[o + 3]) };
+  }
+  return { numbers: c, sword: item(0), axe: item(4) };
 }
 // ===== CORE END =====
 
 (function () {
+  var REPLY_DELAY = 250; // ответ игрока появляется через 250 мс после реплики духа
+
   var $ = function (id) { return document.getElementById(id); };
   var stage = $('stage');
   var hud = $('hud');
@@ -611,10 +628,10 @@ function makeLoot(seed) {
   var IT = makeLoot(SEED);
   var C = IT.numbers;
   var MISS = 2000 - C[0]; // сколько не добрал до отсека щита
-  var PREF = PREFIXES[IT.prefix];
-  var NAME = itemName(IT.prefix, IT.type);
-  var EXTRA1 = itemName(IT.extra[0].prefix, IT.extra[0].type);
-  var EXTRA2 = itemName(IT.extra[1].prefix, IT.extra[1].type);
+  var PREF = PREFIXES[IT.sword.prefix];
+  var AXEPREF = PREFIXES[IT.axe.prefix];
+  var NAME = itemName(IT.sword.prefix, IT.sword.type);
+  var AXENAME = itemName(IT.axe.prefix, IT.axe.type);
 
   function esc(s) {
     return String(s).replace(/[&<>]/g, function (c) {
@@ -640,20 +657,34 @@ function makeLoot(seed) {
       dangling: false, // закорючка показана, но результата ещё нет
       spins: 0,
       revealed: {},
-      extraShown: 0,
+      axeShown: false,
+      eyeShown: false,
       card2: false
     };
   }
 
-  // ——— числа ———
+  // ——— числа: каждый предмет крутится на своей строке ———
+
+  function tok(v, cls, fresh) {
+    return '<span class="tok' + (cls ? ' ' + cls : '') + (fresh ? ' fresh' : '') + '">' + v + '</span>';
+  }
 
   function renderChain(freshIdx, freshFn) {
-    var html = '';
-    if (st.seedShown) html += '<span class="tok seed">' + SEED + '</span>';
-    for (var k = 0; k < st.shown; k++) {
-      html += SQ + '<span class="tok' + (k === freshIdx ? ' fresh' : '') + '">' + C[k] + '</span>';
+    // строка меча: сид и обороты 1-4
+    var row1 = '';
+    if (st.seedShown) row1 += tok(SEED, 'seed', false);
+    var swordEnd = Math.min(st.shown, 4);
+    for (var k = 0; k < swordEnd; k++) row1 += SQ + tok(C[k], '', k === freshIdx);
+    if (st.dangling) row1 += SQ;
+    var html = '<div class="chainrow">' + row1 + '</div>';
+
+    // строка топора: продолжение с последнего числа меча, обороты 5-8
+    if (st.shown > 4) {
+      var row2 = tok(C[3], 'carry', false);
+      for (var m = 4; m < st.shown; m++) row2 += SQ + tok(C[m], '', m === freshIdx);
+      html += '<div class="chainrow">' + row2 + '</div>';
     }
-    if (st.dangling) html += SQ;
+
     chainEl.innerHTML = html;
     if (freshFn || st.dangling) {
       var fns = chainEl.querySelectorAll('.fn');
@@ -664,7 +695,7 @@ function makeLoot(seed) {
   function showLane() {
     var html = '';
     for (var i = 0; i < TYPES.length; i++) {
-      html += '<span class="c' + (i === IT.type ? ' lit' : '') + '" data-b="' + i + '">' + TYPES[i] + '</span>';
+      html += '<span class="c' + (i === IT.sword.type ? ' lit' : '') + '" data-b="' + i + '">' + TYPES[i] + '</span>';
     }
     laneCells.innerHTML = html;
     laneMark.style.left = (C[0] / 10000 * 100).toFixed(2) + '%';
@@ -680,30 +711,41 @@ function makeLoot(seed) {
 
   function q(v, key) { return st.revealed[key] ? v : '???'; }
 
-  function swordCard(idx, fresh) {
+  function statCard(name, nameKnown, typeIdx, dmg, dmgKey, spd, spdKey, tag, fresh) {
     return '<div class="card">' +
-      '<div class="cname">' + (st.revealed.name ? esc(NAME) : '??? меч') + '</div>' +
-      '<div class="ctag">добыча №' + idx + '</div>' +
+      '<div class="cname">' + (nameKnown ? esc(name) : '??? ' + TYPES[typeIdx]) + '</div>' +
+      '<div class="ctag">' + tag + '</div>' +
       '<dl class="rows">' +
-        '<dt>урон</dt><dd' + (fresh === 'dmg' ? ' class="reveal"' : '') + '>' + q(IT.damage, 'dmg') + '</dd>' +
-        '<dt>скорость</dt><dd' + (fresh === 'spd' ? ' class="reveal"' : '') + '>' + q(IT.speed, 'spd') + '</dd>' +
+        '<dt>урон</dt><dd' + (fresh === dmgKey ? ' class="reveal"' : '') + '>' + q(dmg, dmgKey) + '</dd>' +
+        '<dt>скорость</dt><dd' + (fresh === spdKey ? ' class="reveal"' : '') + '>' + q(spd, spdKey) + '</dd>' +
       '</dl>' +
       '<div class="seedline">выведен из числа <b>' + SEED + '</b></div>' +
     '</div>';
   }
 
-  function miniCard(name, idx) {
+  function swordCard(tag, fresh) {
+    return statCard(NAME, st.revealed.name, IT.sword.type, IT.sword.damage, 'dmg', IT.sword.speed, 'spd', tag, fresh);
+  }
+
+  function axeCard(tag, fresh) {
+    return statCard(AXENAME, st.revealed.axname, IT.axe.type, IT.axe.damage, 'axdmg', IT.axe.speed, 'axspd', tag, fresh);
+  }
+
+  function eyeCard() {
     return '<div class="card mini">' +
-      '<div class="cname">' + esc(name) + '</div>' +
-      '<div class="ctag">добыча №' + idx + '</div>' +
+      '<div class="cname">Глаз тролля</div>' +
+      '<div class="ctag">мусор · не из числа</div>' +
     '</div>';
   }
 
   function renderLoot(fresh) {
-    var html = swordCard(1, fresh);
-    if (st.extraShown > 0) html += miniCard(EXTRA1, 2);
-    if (st.extraShown > 1) html += miniCard(EXTRA2, 3);
-    if (st.card2) html += swordCard('1, второе убийство', null);
+    var html = swordCard('добыча №1', fresh);
+    if (st.axeShown) html += axeCard('добыча №2', fresh);
+    if (st.eyeShown) html += eyeCard();
+    if (st.card2) {
+      html += swordCard('добыча №1, второе убийство', null);
+      html += axeCard('добыча №2, второе убийство', null);
+    }
     cardsEl.innerHTML = html;
     lootEl.classList.remove('hidden');
   }
@@ -730,7 +772,8 @@ function makeLoot(seed) {
 
   // ——— сценарий ———
   // Каждый шаг: p — реплика игрока (она же кнопка), g — ответ духа,
-  // fx — что происходит на экране в момент клика, kind — особые действия.
+  // fx — что происходит на экране в момент клика, wait — задержка ответа
+  // игрока после реплики духа (по умолчанию 250 мс), kind — особые действия.
 
   var EX = [
     { p: 'ДОБИТЬ', kind: 'kill',
@@ -761,13 +804,13 @@ function makeLoot(seed) {
     { p: 'Этот меч такой же бесполезный, как и ты, да? СКОЛЬКО УРОНА У НЕГО????',
       g: 'А вот тут интересно. Урон мы сейчас ВЫВЕДЕМ ТОЙ ЖЕ ФУНКЦИЕЙ, ПРИКИНЬ. Если скрестить призрака и бомбу из ежа — знаешь, что выведется?' },
     { p: 'Ещё одна такая шутка, и я узнаю, где ты респавнишься.',
-      g: '...Число. Выведется число. Из чего угодно выводится число, если правильно крутить. Вот, кручу твоё: выпало ' + C[1] + '. Делим на тысячу — урон ' + IT.damage + '.',
+      g: '...Число. Выведется число. Из чего угодно выводится число, если правильно крутить. Вот, кручу твоё: выпало ' + C[1] + '. Делим на тысячу — урон ' + IT.sword.damage + '.',
       fx: function () { st.shown = 2; renderChain(1, false); reveal('dmg', 'dmg'); } },
-    { p: IT.damage + '?! Что за урон — ' + IT.damage + '?!', g: 'Честный.' },
+    { p: IT.sword.damage + '?! Что за урон — ' + IT.sword.damage + '?!', g: 'Честный.' },
     { p: 'СКОРОСТЬ АТАКИ СКОЛЬКО? И знаешь что — дай мне на этот раз число ПОБОЛЬШЕ. Чтоб скорость побольше.',
       g: 'Число побольше — это не лут пожирнее. Это другой лут. Целиком. Вот из соседнего числа, на единицу больше твоего, выпадает серп. Кривой.' },
     { p: 'Почему кривой?!',
-      g: 'Потому что число такое. Не я придумал. Я вообще уже умер. А скорость — вот: кручу, выпало ' + C[2] + ', делим на тысячу. Скорость ' + IT.speed + '. Не благодари.',
+      g: 'Потому что число такое. Не я придумал. Я вообще уже умер. А скорость — вот: кручу, выпало ' + C[2] + ', делим на тысячу. Скорость ' + IT.sword.speed + '. Не благодари.',
       fx: function () { st.shown = 3; renderChain(2, false); reveal('spd', 'spd'); } },
     { p: 'Хоть имя-то у этого позора есть?',
       g: 'Кручу. Выпало ' + C[3] + ' — а это прозвище «' + PREF + '». Знакомься: ' + NAME + '.',
@@ -776,19 +819,25 @@ function makeLoot(seed) {
       g: 'Число решило. Я тут никто.' },
     /* [слот: бит про хранение — вставить, когда автор пришлёт] */
     { p: 'Так. А что у тебя ЕЩЁ есть? Кроме этого огрызка.',
-      g: 'Кручу дальше — падает остальное. ' + EXTRA1 + '. И... ещё один ' + EXTRA2.toLowerCase() +
-         '. Не смотри на меня так. Всё, что прятал, лежало в том же числе.',
+      g: 'Кручу дальше, с новой строки. Выпало ' + C[4] + ' — ЭТО ТОПОР. И ему всё то же: урон ' + IT.axe.damage +
+         ', скорость ' + IT.axe.speed + ', прозвище «' + AXEPREF + '». ' + AXENAME + '. Я не выбираю, слушай.',
+      wait: 2100,
       fx: function () {
         st.lock = true;
-        setTimeout(function () { st.shown = 6; renderChain(5, false); st.extraShown = 1; renderLoot(null); }, 200);
-        setTimeout(function () { st.shown = 8; renderChain(7, false); st.extraShown = 2; renderLoot(null); st.lock = false; }, 850);
+        setTimeout(function () { st.shown = 5; renderChain(4, false); st.axeShown = true; renderLoot(null); }, 200);
+        setTimeout(function () { st.shown = 6; renderChain(5, false); reveal('axdmg', 'axdmg'); }, 700);
+        setTimeout(function () { st.shown = 7; renderChain(6, false); reveal('axspd', 'axspd'); }, 1200);
+        setTimeout(function () { st.shown = 8; renderChain(7, false); reveal('axname', null); st.lock = false; }, 1700);
       } },
+    { p: 'Косой меч и косой топор. Ты надо мной издеваешься.',
+      g: 'Числа такие. А, вот ещё — забирай. Глаз. Этот не из числа, этот настоящий. Мусор, конечно. Но вдруг пригодится.',
+      fx: function () { stage.classList.add('hasEye'); st.eyeShown = true; renderLoot(null); } },
     { p: 'Так. Последний вопрос. А если я тебя убью ещё раз?', g: 'Получишь то же число.' },
-    { p: 'И тот же ' + PREF + ' меч с уроном ' + IT.damage + '?',
-      g: 'И тот же ' + PREF + ' меч. И тот же ' + EXTRA1.toLowerCase() + '. Я, знаешь ли, не рандомный. Я — ' + SEED + '. Хоть сто раз меня убей.' },
+    { p: 'И тот же ' + PREF + ' меч с уроном ' + IT.sword.damage + '?',
+      g: 'И тот же ' + PREF + ' меч. И тот же ' + AXENAME.toLowerCase() + '. Я, знаешь ли, не рандомный. Я — ' + SEED + '. Хоть сто раз меня убей.' },
     { p: 'ЩАС ПРОВЕРИМ.', g: 'НУ ПОПРОБУЙ.', fx: function () { stage.classList.add('raised'); } },
     { p: 'УБИТЬ ЕЩЁ РАЗ', kind: 'rekill',
-      g: 'Ну что, доволен? Два одинаковых косых меча. Коллекционер блять.',
+      g: 'Ну что, доволен? Два косых меча, два косых топора. Глаз один — он у меня физически один был. Коллекционер блять.',
       fx: function () { captionEl.classList.remove('hidden'); } },
     { p: 'СНАЧАЛА', kind: 'restart' }
   ];
@@ -838,7 +887,7 @@ function makeLoot(seed) {
         speak(e.g);
         st.i++;
         st.lock = false;
-        renderButton();
+        setTimeout(renderButton, REPLY_DELAY);
       }, 1100);
       return;
     }
@@ -850,7 +899,7 @@ function makeLoot(seed) {
       // та же цепочка пробегает заново — числа те же, лут тот же
       for (var k = 0; k < st.shown; k++) {
         (function (k) {
-          setTimeout(function () { renderChain(k, false); }, 350 + k * 220);
+          setTimeout(function () { renderChain(k, false); }, 350 + k * 200);
         })(k);
       }
       setTimeout(function () {
@@ -863,20 +912,26 @@ function makeLoot(seed) {
         speak(e.g);
         st.i++;
         st.lock = false;
-        renderButton();
-      }, 350 + st.shown * 220 + 500);
+        setTimeout(renderButton, REPLY_DELAY);
+      }, 350 + st.shown * 200 + 500);
       return;
     }
 
     if (e.fx) e.fx();
-    if (e.g !== null) speak(e.g);
-    st.i++;
-    renderButton();
+    if (e.g !== null) {
+      speak(e.g);
+      pb.classList.add('hidden');
+      st.i++;
+      setTimeout(renderButton, e.wait || REPLY_DELAY);
+    } else {
+      st.i++;
+      renderButton();
+    }
   });
 
   function reset() {
     st = freshState();
-    stage.classList.remove('killed', 'raised', 'hasSword1', 'hasSword2', 'flinch');
+    stage.classList.remove('killed', 'raised', 'hasSword1', 'hasSword2', 'hasEye', 'flinch');
     $('burst').classList.remove('go');
     $('gburst').classList.remove('go');
     hud.classList.add('hidden');
