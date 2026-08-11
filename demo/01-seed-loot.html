@@ -162,23 +162,20 @@
 
   /* ——— пузыри в небе над персонажами ——— */
 
+  /* Пузыри прибиты к углам намертво: дух — верхний правый, игрок — нижний левый.
+     Ни смена длины реплики, ни пауза перед ответом ничего не сдвигают. */
   .talk {
     position: relative;
     z-index: 2;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 0.55rem;
-    padding: 0.9rem 0.9rem 0;
-    min-height: 7.5rem;
-    margin-bottom: -68px; /* пузыри нависают над головами, хвосты достают до говорящих */
+    height: 10.5rem;
+    margin-bottom: -60px; /* пузыри нависают над головами, хвосты достают до говорящих */
     pointer-events: none;
   }
 
   .bubble.player { pointer-events: auto; }
 
   .bubble {
-    position: relative;
+    position: absolute;
     max-width: min(34rem, 88%);
     padding: 0.6rem 0.85rem;
     border-radius: 12px;
@@ -195,7 +192,8 @@
 
   /* дух говорит справа сверху, хвост вниз к нему */
   .bubble.ghost {
-    align-self: flex-end;
+    top: 0.8rem;
+    right: 0.9rem;
     background: #16272c;
     border: 1px solid #2f5c66;
     color: #d8f0f6;
@@ -213,7 +211,8 @@
 
   /* игрок отвечает слева снизу; его пузырь — и есть кнопка */
   .bubble.player {
-    align-self: flex-start;
+    bottom: 0;
+    left: 0.9rem;
     display: block;
     text-align: left;
     background: #1b2537;
@@ -386,8 +385,10 @@
   }
 
   @media (max-width: 420px) {
-    .bubble { font-size: 0.91rem; max-width: 94%; }
-    .talk { padding: 0.7rem 0.6rem 0; }
+    .bubble { font-size: 0.91rem; max-width: 92%; }
+    .talk { height: 14rem; }
+    .bubble.ghost { right: 0.6rem; }
+    .bubble.player { left: 0.6rem; }
     .hud, .loot { padding-left: 0.6rem; padding-right: 0.6rem; }
   }
 </style>
@@ -608,7 +609,7 @@ function makeLoot(seed) {
 // ===== CORE END =====
 
 (function () {
-  var REPLY_DELAY = 250; // ответ игрока появляется через 250 мс после реплики духа
+  var REPLY_DELAY = 500; // ответ игрока появляется через полсекунды после реплики духа
 
   var $ = function (id) { return document.getElementById(id); };
   var stage = $('stage');
@@ -773,7 +774,7 @@ function makeLoot(seed) {
   // ——— сценарий ———
   // Каждый шаг: p — реплика игрока (она же кнопка), g — ответ духа,
   // fx — что происходит на экране в момент клика, wait — задержка ответа
-  // игрока после реплики духа (по умолчанию 250 мс), kind — особые действия.
+  // игрока после реплики духа (по умолчанию полсекунды), kind — особые действия.
 
   var EX = [
     { p: 'ДОБИТЬ', kind: 'kill',
