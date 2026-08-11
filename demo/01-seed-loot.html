@@ -262,14 +262,16 @@
 
   .scene svg { display: block; width: 100%; height: auto; max-width: 100%; }
 
-  #bossDead, #ghost, #drop1, #drop2, #dropEye { display: none; }
+  #bossDead, #ghost, #drop1, #drop2, #dropEye, #dropEye2 { display: none; }
   .killed #bossAlive { display: none; }
   .killed #bossDead { display: block; }
   .killed #ghost { display: block; animation: rise 0.9s ease-out; }
   .hasSword1 #drop1 { display: block; }
   .hasSword2 #drop2 { display: block; }
   .hasEye #dropEye { display: block; }
-  .hasSword1 #drop1 .sw, .hasSword2 #drop2 .sw, .hasEye #dropEye .sw { animation: plop 0.5s ease-out; }
+  .hasEye2 #dropEye2 { display: block; }
+  .hasSword1 #drop1 .sw, .hasSword2 #drop2 .sw,
+  .hasEye #dropEye .sw, .hasEye2 #dropEye2 .sw { animation: plop 0.5s ease-out; }
 
   #ghostBody { animation: floaty 2.6s ease-in-out infinite; }
   .flinch #ghostBody { animation: flinch 0.6s ease-out, floaty 2.6s 0.6s ease-in-out infinite; }
@@ -466,6 +468,14 @@
             <circle cx="-2" cy="-1" r="3.2" fill="#5a7a3d"></circle>
             <circle cx="-2.8" cy="-1.8" r="1.3" fill="#20242d"></circle>
             <path d="M-6 3 q 3 3 7 2" stroke="#c98f8f" stroke-width="1" fill="none"></path>
+          </g>
+        </g>
+        <g id="dropEye2" transform="translate(280 197)">
+          <g class="sw">
+            <path d="M5 -3 q 6 -4 9 -1" stroke="#a04040" stroke-width="1.6" fill="none" stroke-linecap="round"></path>
+            <circle r="6.4" fill="#e8e4d5" stroke="#c9c3af" stroke-width="1"></circle>
+            <circle cx="1.5" cy="-1.5" r="3" fill="#5a7a3d"></circle>
+            <circle cx="2.2" cy="-2.2" r="1.2" fill="#20242d"></circle>
           </g>
         </g>
       </g>
@@ -732,20 +742,21 @@ function makeLoot(seed) {
     return statCard(AXENAME, st.revealed.axname, IT.axe.type, IT.axe.damage, 'axdmg', IT.axe.speed, 'axspd', tag, fresh);
   }
 
-  function eyeCard() {
+  function eyeCard(tag) {
     return '<div class="card mini">' +
       '<div class="cname">Глаз тролля</div>' +
-      '<div class="ctag">мусор · не из числа</div>' +
+      '<div class="ctag">' + tag + '</div>' +
     '</div>';
   }
 
   function renderLoot(fresh) {
     var html = swordCard('добыча №1', fresh);
     if (st.axeShown) html += axeCard('добыча №2', fresh);
-    if (st.eyeShown) html += eyeCard();
+    if (st.eyeShown) html += eyeCard('мусор · не из числа');
     if (st.card2) {
       html += swordCard('добыча №1, второе убийство', null);
       html += axeCard('добыча №2, второе убийство', null);
+      html += eyeCard('мусор · второе убийство');
     }
     cardsEl.innerHTML = html;
     lootEl.classList.remove('hidden');
@@ -838,7 +849,7 @@ function makeLoot(seed) {
       g: 'И тот же ' + PREF + ' меч. И тот же ' + AXENAME.toLowerCase() + '. Я, знаешь ли, не рандомный. Я — ' + SEED + '. Хоть сто раз меня убей.' },
     { p: 'ЩАС ПРОВЕРИМ.', g: 'НУ ПОПРОБУЙ.', fx: function () { stage.classList.add('raised'); } },
     { p: 'УБИТЬ ЕЩЁ РАЗ', kind: 'rekill',
-      g: 'Ну что, доволен? Два косых меча, два косых топора. Глаз один — он у меня физически один был. Коллекционер блять.',
+      g: 'Ну что, доволен? Два косых меча, два косых топора, два глаза. Коллекционер блять.',
       fx: function () { captionEl.classList.remove('hidden'); } },
     { p: 'СНАЧАЛА', kind: 'restart' }
   ];
@@ -907,6 +918,7 @@ function makeLoot(seed) {
         st.card2 = true;
         renderLoot(null);
         stage.classList.add('hasSword2');
+        stage.classList.add('hasEye2');
         matchEl.textContent = 'Совпал. Предмет в предмет.';
         matchEl.classList.remove('hidden');
         if (e.fx) e.fx();
@@ -932,7 +944,7 @@ function makeLoot(seed) {
 
   function reset() {
     st = freshState();
-    stage.classList.remove('killed', 'raised', 'hasSword1', 'hasSword2', 'hasEye', 'flinch');
+    stage.classList.remove('killed', 'raised', 'hasSword1', 'hasSword2', 'hasEye', 'hasEye2', 'flinch');
     $('burst').classList.remove('go');
     $('gburst').classList.remove('go');
     hud.classList.add('hidden');
