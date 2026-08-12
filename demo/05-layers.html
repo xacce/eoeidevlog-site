@@ -1027,25 +1027,25 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 
   // ——— порталы ———
 
-  // На каждом месте их два: нижний уводит туда, где столбы вдвое чаще, верхний
-  // возвращает туда, где вдвое реже. Ходить туда-сюда можно сколько угодно —
-  // место при этом не меняется, меняется только счёт.
-  var DOWN_M = 34, UP_M = -34;   // насколько диски разнесены от середины места
-
+  // Портал — один на пару соседних миров, и стоит он на одном и том же месте в
+  // обоих: из мира k он уводит вниз, в мир k+1, а из мира k+1 тем же местом
+  // возвращает наверх. Поэтому в каждом мире их ровно два — тот, что уводит
+  // глубже, и тот, из которого ты сюда вышел; ходить можно сколько угодно.
   function portalLabel(k) { return 'столбы через ' + LAYERS[k].cell + ' м'; }
 
-  // Пара порталов на месте i — с точки зрения того мира, в котором стоим.
-  function portalsAt(i) {
-    var s = gatePoint(WORLD_SEED, i), list = [];
+  function portalList() {
+    var list = [];
+    var down = gatePoint(WORLD_SEED, world);
     var deeper = world + 1 < LAYERS.length ? world + 1 : -1;
     list.push({
-      x: s.x, y: s.y + DOWN_M, to: deeper, down: true,
+      x: down.x, y: down.y, to: deeper, down: true,
       text: deeper < 0 ? 'к сливалке' : portalLabel(deeper),
       col: deeper < 0 ? '#8b94a3' : LAYERS[deeper].col
     });
     if (world > 0) {
+      var up = gatePoint(WORLD_SEED, world - 1);
       list.push({
-        x: s.x, y: s.y + UP_M, to: world - 1, down: false,
+        x: up.x, y: up.y, to: world - 1, down: false,
         text: portalLabel(world - 1), col: LAYERS[world - 1].col
       });
     }
@@ -1077,13 +1077,11 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   }
 
   function drawPortals(camX, camY, t) {
-    for (var i = 0; i < LAYERS.length; i++) {
-      var list = portalsAt(i);
-      for (var j = 0; j < list.length; j++) {
-        var p = list[j], sx = p.x - camX, sy = p.y - camY;
-        if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
-        drawPortal(sx, sy, t, p);
-      }
+    var list = portalList();
+    for (var j = 0; j < list.length; j++) {
+      var p = list[j], sx = p.x - camX, sy = p.y - camY;
+      if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
+      drawPortal(sx, sy, t, p);
     }
   }
 
@@ -1740,7 +1738,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     if (open && phase === 1) {
       drawPortals(camX, camY, t);
       // стрелка ведёт к тому порталу, который уводит глубже по пути
-      var go = portalsAt(world)[0];
+      var go = portalList()[0];
       drawArrow(go.x, go.y, go.col, camX, camY);
     }
     if (open && !anim) drawNearPosts(camX, camY);
@@ -1815,12 +1813,10 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
       if (Math.hypot(portalLock.x - px, portalLock.y - py) > REACH + 6) portalLock = null;
       else return;
     }
-    for (var i = 0; i < LAYERS.length; i++) {
-      var list = portalsAt(i);
-      for (var j = 0; j < list.length; j++) {
-        var p = list[j];
-        if (Math.hypot(p.x - px, p.y - py) < REACH) { travel(p); return; }
-      }
+    var list = portalList();
+    for (var j = 0; j < list.length; j++) {
+      var p = list[j];
+      if (Math.hypot(p.x - px, p.y - py) < REACH) { travel(p); return; }
     }
   }
 
