@@ -7,12 +7,9 @@
 <style>
   :root {
     --bg: #111318;
-    --panel: #181b21;
-    --panel-2: #1d212a;
     --line: #2a2f3a;
     --text: #dde2ea;
     --dim: #8b94a3;
-    --dim-2: #6d7684;
     --accent: #7aa2f7;
     --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -27,434 +24,382 @@
     color: var(--text);
     font-family: var(--sans);
     font-size: 15px;
-    line-height: 1.55;
+    line-height: 1.5;
     -webkit-text-size-adjust: 100%;
   }
 
-  .demo {
+  body { padding: 0.6rem; }
+
+  .hidden { display: none !important; }
+
+  /* ——— окно игры: всё происходит внутри, снаружи нет ни кнопки ——— */
+
+  .game {
     max-width: 600px;
     width: 100%;
     margin: 0 auto;
-    padding: 1.5rem 1rem 2.5rem;
-    overflow-wrap: break-word;
-  }
-
-  h1 {
-    font-size: 1.35rem;
-    line-height: 1.3;
-    margin: 0 0 0.6rem;
-    font-weight: 600;
-  }
-
-  h2 {
-    font-size: 0.82rem;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--dim);
-    font-weight: 600;
-    margin: 0 0 0.7rem;
-  }
-
-  p { margin: 0 0 0.8rem; }
-  p.lead { color: var(--dim); }
-  p:last-child { margin-bottom: 0; }
-
-  .block {
-    background: var(--panel);
+    background: #05070c;
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 0.9rem;
-    margin-top: 1.1rem;
+    border-radius: 10px;
+    overflow: hidden;
   }
 
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+  .stage { position: relative; }
+
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 10 / 7;
+    background: #05070c;
+    touch-action: pan-y; /* по канве можно листать страницу, ходим с клавиатуры и крестовины */
   }
 
-  .field {
+  /* ——— кнопки поверх мира ——— */
+
+  .ui {
+    position: absolute;
+    left: 0.5rem;
+    top: 0.5rem;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
-    flex: 1 1 100%;
-    min-width: 0;
+    max-width: calc(100% - 1rem);
   }
 
-  label {
-    font-size: 0.78rem;
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+
+  .ui button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(17, 19, 24, 0.82);
+    border: 1px solid var(--line);
+    border-radius: 6px;
     color: var(--dim);
-  }
-
-  input[type="text"] {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    padding: 0.5rem 0.6rem;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 0.95rem;
-  }
-
-  input[type="text"]:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  button {
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 100%;
-    padding: 0.5rem 0.8rem;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--text);
     font-family: var(--sans);
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-
-  button:hover { border-color: var(--accent); }
-  button:active { background: #232833; }
-
-  button.primary {
-    background: #23324d;
-    border-color: #35507d;
-    color: #cfdcf7;
-  }
-
-  button.wide { display: block; width: 100%; margin-top: 0.2rem; }
-
-  .note {
-    font-size: 0.82rem;
-    color: var(--dim);
-    margin-top: 0.6rem;
-    overflow-wrap: anywhere;
-  }
-
-  .note b {
-    font-family: var(--mono);
-    font-weight: 500;
-    color: var(--text);
-  }
-
-  .swatch {
-    width: 9px;
-    height: 9px;
-    border-radius: 2px;
-    flex: none;
-  }
-
-  /* ---- строка вывода ---- */
-
-  .sum {
-    margin-top: 0.8rem;
-    padding: 0.6rem 0.75rem;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
-    border-radius: 6px;
-    font-size: 0.95rem;
+    font-size: 0.72rem;
     line-height: 1.5;
-    min-height: 3.6em;
-  }
-
-  .sum.idle {
-    border-left-color: var(--line);
-    color: var(--dim-2);
-  }
-
-  /* ---- ручка ---- */
-
-  .knob {
-    margin-top: 0.5rem;
-  }
-
-  .knob .head {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.2rem 0.8rem;
-    font-size: 0.78rem;
-    color: var(--dim);
-    margin-bottom: 0.15rem;
-  }
-
-  .knob .head b {
-    font-family: var(--mono);
-    font-weight: 500;
-    color: var(--text);
-  }
-
-  input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    height: 22px;
-    margin: 0;
-    background: transparent;
     cursor: pointer;
+    white-space: nowrap;
   }
 
-  input[type="range"]::-webkit-slider-runnable-track {
-    height: 4px;
-    border-radius: 2px;
-    background: var(--line);
+  .ui button:hover { border-color: var(--accent); color: var(--text); }
+  .ui .lab { font-size: 0.68rem; color: var(--dim); }
+
+  /* СНАЧАЛА живёт в дальнем углу: наверху слева теперь координата */
+  .ui.br {
+    left: auto;
+    right: 0.5rem;
+    top: auto;
+    bottom: 0.5rem;
+    align-items: flex-end;
   }
 
-  input[type="range"]::-moz-range-track {
-    height: 4px;
-    border-radius: 2px;
-    background: var(--line);
+  @media (pointer: coarse) {
+    .ui.br { bottom: 8.4rem; }   /* над крестовиной */
   }
 
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    margin-top: -6px;
-    border-radius: 50%;
-    background: var(--accent);
-    border: none;
-  }
-
-  input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border: none;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-
-  input[type="range"]:focus { outline: none; }
-  input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px #23324d; }
-  input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px #23324d; }
-
-  /* ---- две колонки: слои и сумма ---- */
-
-  .pair {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 240px);
-    gap: 0.8rem;
-    width: 100%;
-    align-items: start;
-  }
-
-  .stack { min-width: 0; }
-  .shot { min-width: 0; }
-
-  .frame {
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    aspect-ratio: 1 / 1;
-  }
-
-  .frame canvas {
-    position: absolute;
-    inset: 0;
-    display: block;
-    width: 100%;
-    height: 100%;
+  /* координата: то же место, где раньше была кнопка */
+  .coord {
+    padding: 0.2rem 0.5rem;
+    background: rgba(17, 19, 24, 0.82);
     border: 1px solid var(--line);
     border-radius: 6px;
-    background: var(--panel-2);
-    image-rendering: pixelated;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    color: rgba(221, 226, 234, 0.8);
+    white-space: pre;
   }
 
-  .shot .cap {
-    margin-top: 0.4rem;
-    font-size: 0.9rem;
+  /* при переходе в другой мир она вспыхивает: место-то осталось то же */
+  .coord.hot {
+    color: #ffe292;
+    border-color: #6d5f3c;
+    background: rgba(45, 38, 20, 0.9);
+  }
+
+  /* чей мир на экране — рядом с координатой, в той же планке, а не на канве:
+     наверху окна живут координата и галочки, и текст туда не лезет */
+  .coord.head {
+    font-family: var(--sans);
     font-weight: 600;
     color: var(--accent);
   }
 
-  .shot .sub {
-    font-size: 0.78rem;
-    color: var(--dim);
-    overflow-wrap: anywhere;
-  }
-
-  /* ---- слой ---- */
-
-  .layer {
-    min-width: 0;
-    margin-bottom: 0.8rem;
-    padding-bottom: 0.7rem;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .layer.last { border-bottom: none; padding-bottom: 0.1rem; }
-
-  .strip {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    height: 30px;
-    margin-top: 0.4rem;
-    border: 1px solid var(--line);
-    border-radius: 5px;
-    background: var(--panel-2);
-    image-rendering: pixelated;
-    opacity: 0.22;
-  }
-
-  .layer.on .strip { opacity: 1; }
-
-  /* ---- тумблеры ---- */
-
-  .toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    min-width: 0;
-    padding: 0.45rem 0.6rem;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--text);
-    font-size: 0.88rem;
-    cursor: pointer;
-    user-select: none;
-  }
-
-  .toggle:hover { border-color: var(--accent); }
-  .toggle.on { background: #23324d; border-color: #35507d; color: #cfdcf7; }
-
-  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
-
-  .toggle .box {
-    width: 15px;
-    height: 15px;
-    flex: none;
-    border: 1px solid var(--dim-2);
+  /* галочка: мир либо в земле, либо снят — их можно ставить в любом наборе */
+  .quilt .box {
+    width: 11px;
+    height: 11px;
     border-radius: 3px;
-    background: var(--bg);
+    border: 1px solid currentColor;
+    opacity: 0.5;
+    flex: none;
   }
 
-  .toggle.on .box {
-    border-color: var(--accent);
-    background: var(--accent);
-    box-shadow: inset 0 0 0 3px #23324d;
+  .quilt.on { color: var(--c); border-color: var(--c); }
+  .quilt.on .box {
+    opacity: 1;
+    background: currentColor;
+    box-shadow: inset 0 0 0 2px #14171d;
+  }
+  .quilt.shown { background: rgba(35, 50, 77, 0.9); }
+
+  #allBtn.on { background: rgba(35, 50, 77, 0.9); border-color: #35507d; color: #cfdcf7; }
+
+  /* ——— крестовина для пальцев ——— */
+
+  .pad {
+    position: absolute;
+    right: 0.55rem;
+    bottom: 0.55rem;
+    display: none;
+    grid-template-columns: repeat(3, 2.4rem);
+    grid-auto-rows: 2.4rem;
+    gap: 0.25rem;
+    z-index: 2;
   }
 
-  .toggle input:focus-visible + .box { box-shadow: 0 0 0 3px #23324d; }
-
-  .toggle .nm {
-    min-width: 0;
-    overflow-wrap: anywhere;
+  @media (pointer: coarse) {
+    .pad { display: grid; }
   }
 
-  .toggle .nm i {
-    font-style: normal;
+  /* пока идёт разговор и ходить нельзя, крестовина не нужна */
+  .pad.off { display: none !important; }
+
+  .pad button {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(24, 27, 33, 0.75);
     color: var(--dim);
-    font-size: 0.82em;
+    font-size: 0.9rem;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
   }
 
-  .toggle.on .nm i { color: #9db4e2; }
+  .pad button:active { background: #23324d; color: #cfdcf7; border-color: #35507d; }
+  .pad .u { grid-column: 2; grid-row: 1; }
+  .pad .l { grid-column: 1; grid-row: 2; }
+  .pad .r { grid-column: 3; grid-row: 2; }
+  .pad .d { grid-column: 2; grid-row: 3; }
 
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem 0.8rem;
-    margin-top: 0.7rem;
-    font-size: 0.78rem;
-    color: var(--dim);
+  /* ——— космический дух: тот самый, из первого стенда, теперь в шлеме ——— */
+
+  .ghostfig {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.5rem;
+    width: 5.2rem;
+    display: none;
+    pointer-events: none;
+    z-index: 3;
   }
 
-  .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
-  .legend .swatch { border: 1px solid #00000055; }
+  .ghostfig.show { display: block; animation: rise 0.9s ease-out; }
+  .ghostfig .bob { animation: floaty 2.6s ease-in-out infinite; }
 
-  hr.sep {
-    border: none;
-    border-top: 1px solid var(--line);
-    margin: 1.6rem 0 0;
+  .tw  { animation: twinkle 1.7s ease-in-out infinite; }
+  .tw2 { animation: twinkle 2.3s 0.5s ease-in-out infinite; }
+  .tw3 { animation: twinkle 1.3s 0.9s ease-in-out infinite; }
+
+  @keyframes rise {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 0.95; }
   }
 
-  @media (max-width: 460px) {
-    .pair { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-    .shot { max-width: 320px; margin: 0 auto; }
+  /* ——— пузыри поверх мира ——— */
+
+  .bubble {
+    position: absolute;
+    max-width: 58%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    line-height: 1.42;
+    animation: pop 0.22s ease-out;
+    z-index: 4;
   }
 
-  @media (max-width: 380px) {
-    .demo { padding: 1.1rem 0.7rem 2rem; }
+  @keyframes pop {
+    from { transform: translateY(6px) scale(0.97); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  /* дух говорит сверху, хвост вправо — к нему. Ниже верхней планки: там
+     координата и галочки, накрывать их пузырём нельзя.
+     По реплике щёлкают — она и есть «дальше», сама ничего не мотается */
+  .bubble.ghost {
+    top: 2.6rem;
+    right: 5.6rem;
+    background: #16272c;
+    border: 1px solid #2f5c66;
+    color: #d8f0f6;
+    cursor: pointer;
+  }
+
+  .bubble.ghost:hover { border-color: #7dd3e8; }
+  .bubble.ghost:active { transform: scale(0.99); }
+  .bubble.ghost .hint { color: #7dd3e8; font-size: 0.85em; margin-left: 0.35rem; }
+
+  /* когда слева появился второй ряд с галочками, пузырь съезжает ещё ниже */
+  .bubble.ghost.lower { top: 4.7rem; }
+
+  .bubble.ghost::after {
+    content: "";
+    position: absolute;
+    top: 14px;
+    right: -9px;
+    border: 9px solid transparent;
+    border-left-color: #2f5c66;
+    border-right: none;
+  }
+
+  /* колобок говорит слева, ниже кнопки СНАЧАЛА, чтобы её не накрыть */
+  .bubble.blob {
+    left: 0.6rem;
+    top: 2.5rem;
+    background: #2b261c;
+    border: 1px solid #6d5f3c;
+    color: #ecdfbe;
+    cursor: pointer;
+  }
+
+  .bubble.blob:hover { border-color: #c9b184; }
+  .bubble.blob .hint { color: #c9b184; font-size: 0.85em; margin-left: 0.35rem; }
+
+  /* игрок отвечает снизу; его пузырь — и есть кнопка */
+  .bubble.player {
+    left: 0.7rem;
+    bottom: 0.7rem;
+    display: block;
+    text-align: left;
+    background: #1b2537;
+    border: 1px solid #35507d;
+    color: #dbe6fb;
+    cursor: pointer;
+    max-width: 78%;
+    animation: pop 0.22s ease-out, breathe 2.2s 0.4s ease-in-out infinite;
+  }
+
+  .bubble.player::after {
+    content: "";
+    position: absolute;
+    bottom: -9px;
+    left: 16%;
+    border: 9px solid transparent;
+    border-top-color: #35507d;
+    border-bottom: none;
+  }
+
+  .bubble.player:hover { border-color: var(--accent); background: #20304a; }
+  .bubble.player:active { transform: scale(0.985); }
+
+  /* реплика, которую игрок говорит сам: щёлкают по ней так же, как по всему
+     остальному, — сама она не гаснет */
+  .bubble.player.said { animation: pop 0.22s ease-out; }
+
+  .bubble.player .hint {
+    color: var(--accent);
+    font-size: 0.85em;
+    margin-left: 0.35rem;
+  }
+
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(122, 162, 247, 0); }
+    50% { box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.16); }
+  }
+
+  /* реплика игрока не должна залезать на кнопку СНАЧАЛА в дальнем углу */
+  .bubble.player { right: 6.4rem; max-width: none; }
+
+  @media (pointer: coarse) {
+    .bubble.player { right: 8.6rem; }   /* и на крестовину тоже */
+  }
+
+  @media (max-width: 420px) {
+    .ui button { font-size: 0.68rem; padding: 0.18rem 0.42rem; }
+    .coord { font-size: 0.68rem; padding: 0.18rem 0.42rem; }
+    .bubble { font-size: 0.86rem; }
+    /* длинной реплике духа в узком пузыре не хватит сцены — раскатываем на всю ширину */
+    .bubble.ghost { max-width: none; left: 0.5rem; right: 0.5rem; top: 2.5rem; }
+    .bubble.ghost.lower { top: 4.6rem; }
+    .bubble.ghost::after { display: none; }
+    .bubble.blob { max-width: none; right: 0.5rem; top: 2.4rem; }
+    .ghostfig { width: 4.4rem; }
   }
 </style>
 </head>
 <body>
-<div class="demo">
+<div class="game" id="game">
 
-  <h1>Естественность — это сложение масштабов</h1>
-  <p class="lead">Один шум даёт либо плавные пятна, либо мелкую рябь — на мир не похоже
-  ни то, ни другое. Мир получается, когда несколько таких картинок разного размера
-  складывают в одну: крупная решает, где верх и где низ, мелкие только шевелят
-  поверхность. Соберите руками и посмотрите, что чего стоит.</p>
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="Мир сверху: персонаж, столбы с числами, ворота в мир с частыми столбами и сливалка"></canvas>
 
-  <div class="block">
-    <h2>Сид</h2>
-    <div class="controls">
-      <div class="field">
-        <label for="seedInput">Одно число на весь стенд — любой текст или число</label>
-        <input type="text" id="seedInput" value="12345" spellcheck="false" autocomplete="off">
+    <div class="ui" id="ui">
+      <div class="row">
+        <span class="coord" id="coordEl">x —   y —</span>
+        <span class="coord head" id="headEl"></span>
       </div>
-      <button class="primary" id="reseedBtn">Другой сид</button>
+      <div class="row hidden" id="quilts"><span class="lab">смотреть</span></div>
     </div>
-  </div>
 
-  <div class="block">
-    <h2>Слои и их сумма</h2>
-
-    <div class="pair">
-      <div class="stack" id="stack"></div>
-      <div class="shot">
-        <div class="frame">
-          <canvas id="cvOut" width="256" height="256" aria-label="сумма включённых слоёв"></canvas>
-        </div>
-        <div class="cap">Сумма</div>
-        <div class="sub" id="outSub">—</div>
+    <div class="ui br" id="uiBR">
+      <div class="row">
+        <button type="button" id="resetBtn">СНАЧАЛА</button>
       </div>
     </div>
 
-    <button class="wide" id="resetBtn">Собрать как надо</button>
+    <!-- дух тролля из первого стенда: умер, вознёсся, обзавёлся шлемом и антенной -->
+    <svg class="ghostfig" id="ghostFig" viewBox="0 0 120 132" aria-label="Космический дух">
+      <g class="tw"><path d="M16 24 l2.2 5.4 5.4 2.2 -5.4 2.2 -2.2 5.4 -2.2 -5.4 -5.4 -2.2 5.4 -2.2 z" fill="#cdeef5"></path></g>
+      <g class="tw2"><path d="M103 60 l1.6 3.8 3.8 1.6 -3.8 1.6 -1.6 3.8 -1.6 -3.8 -3.8 -1.6 3.8 -1.6 z" fill="#cdeef5"></path></g>
+      <g class="tw3"><circle cx="26" cy="100" r="1.7" fill="#cdeef5"></circle></g>
+      <g class="bob">
+        <path d="M34 62 a26 30 0 0 1 52 0 l0 22 q-6.5 9 -13 0 q-6.5 9 -13 0 q-6.5 9 -13 0 q-6.5 9 -13 0 z"
+              fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></path>
+        <circle cx="60" cy="38" r="15" fill="#9fdbe8" opacity="0.55" stroke="#cdeef5" stroke-width="2"></circle>
+        <circle cx="54" cy="36" r="3" fill="#eef9fc"></circle>
+        <line x1="63" y1="33" x2="69" y2="39" stroke="#5c98a6" stroke-width="2.5" stroke-linecap="round"></line>
+        <line x1="69" y1="33" x2="63" y2="39" stroke="#5c98a6" stroke-width="2.5" stroke-linecap="round"></line>
+        <!-- шлем-аквариум и антенна -->
+        <circle cx="60" cy="38" r="24" fill="none" stroke="#7dd3e8" stroke-width="2" opacity="0.85"></circle>
+        <path d="M43 28 a22 22 0 0 1 11 -9" fill="none" stroke="#eef9fc" stroke-width="2" stroke-linecap="round" opacity="0.8"></path>
+        <line x1="60" y1="14" x2="60" y2="6" stroke="#7dd3e8" stroke-width="2"></line>
+        <circle class="tw2" cx="60" cy="5" r="3" fill="#ffd479"></circle>
+      </g>
+    </svg>
 
-    <div class="sum" id="verdict">—</div>
-    <p class="note" id="seedLine">—</p>
-    <div class="legend" id="legend"></div>
+    <!-- разговор: пузырь духа, пузырь-кнопка игрока и то, что игрок говорит сам -->
+    <div class="bubble ghost hidden" id="gb"></div>
+    <div class="bubble blob hidden" id="bb"></div>
+    <div class="bubble player said hidden" id="sb"></div>
+    <button type="button" class="bubble player hidden" id="pb"></button>
+
+    <div class="pad" id="pad">
+      <button type="button" class="u" data-k="up" aria-label="вверх">▲</button>
+      <button type="button" class="l" data-k="left" aria-label="влево">◀</button>
+      <button type="button" class="r" data-k="right" aria-label="вправо">▶</button>
+      <button type="button" class="d" data-k="down" aria-label="вниз">▼</button>
+    </div>
   </div>
 
-  <hr class="sep">
+</div>
 
 <script>
 // ===== CORE START =====
-// Хеш строки в 32-битное число. xmur3.
-function xmur3(str) {
-  var h = 1779033703 ^ str.length;
-  for (var i = 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
-  }
-  return function () {
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    h ^= h >>> 16;
-    return h >>> 0;
-  };
-}
-
-// Сид — из текста в поле ввода.
-function seedFromText(text) {
-  if (/^\d+$/.test(text)) return (Number(text) % 4294967296) >>> 0;
-  return xmur3(text)();
-}
-
 // Бросок в точке: целочисленный хеш от места и сида. Никакого состояния —
 // одно и то же место при одном сиде всегда даёт одно и то же число.
 function hashU32(x, y, seed) {
@@ -468,306 +413,1558 @@ function hashU32(x, y, seed) {
   return h >>> 0;
 }
 
-// Переход у бросков замедлен: не прямая, а S-образная кривая.
-function smoothstep(t) { return t * t * (3 - 2 * t); }
+var WORLD_SEED = 8;
 
-// Четыре слоя одного и того же шума. cell — сколько точек приходится на клетку:
-// чем клетка крупнее, тем реже броски и тем плавнее слой. power — сила слоя
-// в сотых долях, по умолчанию убывает от крупного к мелкому.
+// Четыре мира. Устроены одинаково — столбы с числами, между столбами
+// досчитывается, — и отличаются только тем, как редко эти столбы вкопаны:
+// каждый следующий вдвое чаще. Смотрят на все четыре одной меркой, метр в
+// метр, без всякого приближения: иначе миры выглядели бы одинаково, а вся
+// разница между ними — ровно в частоте столбов.
+// power — с какой силой мир входит в общий, когда миры сливают.
 var LAYERS = [
-  { name: 'Очень крупный', hint: 'материки', cell: 64, power: 100 },
-  { name: 'Крупный', hint: 'холмы', cell: 16, power: 50 },
-  { name: 'Мелкий', hint: 'камни', cell: 4, power: 25 },
-  { name: 'Совсем мелкий', hint: 'шероховатость', cell: 1, power: 10 }
+  { cell: 192, power: 100, col: '#7aa2f7' },
+  { cell: 96,  power: 45,  col: '#7fd6a2' },
+  { cell: 48,  power: 18,  col: '#ffd479' },
+  { cell: 24,  power: 6,   col: '#e08fd0' }
 ];
 
-// Сид один на весь стенд. Слой берёт его же, сдвинутый на свой номер, —
-// оттого узоры у слоёв разные, а мир один. Именно эти числа стенд и
-// показывает человеку строкой под картинкой.
+// Клетка самого редкого мира влезает в окно целиком, поэтому его четыре
+// ближних столба всегда на экране; у самого частого их на экране под сотню.
+// Числа пишутся только там, где столбы не сливаются в кашу.
+var NUM_MIN = 40;
+
+// Сид один на все миры. Мир берёт его же, сдвинутый на свой номер.
 function layerSeed(seed, i) { return (seed + i) >>> 0; }
 
-function throwAt(ls, x, y) { return hashU32(x, y, ls) / 4294967296; }
+// На столбе брошено одно число — высота в метрах, от 0 до 99.
+function rollAt(seed, x, y) { return hashU32(x, y, seed) % 100; }
 
-// Поле одного слоя: узлы решётки — броски, между ними сглаженный переход.
-function field(w, h, ls, cell) {
-  var nx = Math.ceil(w / cell) + 2, ny = Math.ceil(h / cell) + 2;
-  var nodes = new Float64Array(nx * ny);
-  for (var gy = 0; gy < ny; gy++) {
-    for (var gx = 0; gx < nx; gx++) nodes[gy * nx + gx] = throwAt(ls, gx * cell, gy * cell);
-  }
-  var ix = new Int32Array(w), wxs = new Float64Array(w);
-  for (var x = 0; x < w; x++) {
-    var x0 = Math.floor(x / cell);
-    ix[x] = x0;
-    wxs[x] = smoothstep((x - x0 * cell) / cell);
-  }
-  var out = new Float64Array(w * h);
-  for (var y = 0; y < h; y++) {
-    var y0 = Math.floor(y / cell);
-    var wy = smoothstep((y - y0 * cell) / cell);
-    var r0 = y0 * nx, r1 = (y0 + 1) * nx;
-    var row = y * w;
-    for (x = 0; x < w; x++) {
-      var gx0 = ix[x], wx = wxs[x];
-      var v00 = nodes[r0 + gx0], v10 = nodes[r0 + gx0 + 1];
-      var v01 = nodes[r1 + gx0], v11 = nodes[r1 + gx0 + 1];
-      var top = v00 + (v10 - v00) * wx;
-      var bot = v01 + (v11 - v01) * wx;
-      out[row + x] = top + (bot - top) * wy;
-    }
-  }
-  return out;
+// Переход между столбами замедлен: не прямая, а S-образная кривая.
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+// Высота в любой точке одного мира: между четырьмя ближними его столбами,
+// чем ближе столб — тем больше его слово. Ничего не хранится, всё считается.
+function soloH(seed, k, x, y) {
+  var c = LAYERS[k].cell, ls = layerSeed(seed, k);
+  var cx = Math.floor(x / c), cy = Math.floor(y / c);
+  var wx = smoothstep((x - cx * c) / c), wy = smoothstep((y - cy * c) / c);
+  var v00 = rollAt(ls, cx * c, cy * c);
+  var v10 = rollAt(ls, (cx + 1) * c, cy * c);
+  var v01 = rollAt(ls, cx * c, (cy + 1) * c);
+  var v11 = rollAt(ls, (cx + 1) * c, (cy + 1) * c);
+  var top = v00 + (v10 - v00) * wx;
+  var bot = v01 + (v11 - v01) * wx;
+  return top + (bot - top) * wy;
 }
 
-function buildLayers(w, h, seed) {
-  var out = [];
-  for (var i = 0; i < LAYERS.length; i++) out.push(field(w, h, layerSeed(seed, i), LAYERS[i].cell));
-  return out;
+// Разбор точки: те же четыре столба, что в soloH, плюс сколько у кого взято.
+function cornersAt(seed, k, x, y) {
+  var c = LAYERS[k].cell, ls = layerSeed(seed, k);
+  var cx = Math.floor(x / c) * c, cy = Math.floor(y / c) * c;
+  var wx = smoothstep((x - cx) / c), wy = smoothstep((y - cy) / c);
+  return [
+    { x: cx, y: cy, v: rollAt(ls, cx, cy), w: (1 - wx) * (1 - wy) },
+    { x: cx + c, y: cy, v: rollAt(ls, cx + c, cy), w: wx * (1 - wy) },
+    { x: cx, y: cy + c, v: rollAt(ls, cx, cy + c), w: (1 - wx) * wy },
+    { x: cx + c, y: cy + c, v: rollAt(ls, cx + c, cy + c), w: wx * wy }
+  ];
 }
 
-// Слой действует, если включён и сила не на нуле.
-function activeOf(on, power) {
-  var out = [];
-  for (var i = 0; i < LAYERS.length; i++) out.push(!!on[i] && power[i] > 0);
-  return out;
-}
+// Насколько один столб двигает землю, когда его мир вливают в общий: от
+// середины, со своей силой. Это то самое число, что всплывает над столбом.
+function pullOf(k, v) { return (LAYERS[k].power / 100) * (v - 50); }
 
-// Сумма. Середина остаётся серединой, а каждый слой тянет от неё вверх или вниз
-// со своей силой. Раскраска берёт значение как есть: выключили крупный — и
-// картинка честно схлопывается к середине, никакого выравнивания задним числом.
-function combine(fields, on, power) {
-  var act = activeOf(on, power);
-  var n = fields[0].length;
-  var out = new Float64Array(n);
-  for (var i = 0; i < n; i++) {
-    var s = 0.5;
-    for (var k = 0; k < fields.length; k++) {
-      if (!act[k]) continue;
-      s += (power[k] / 100) * (fields[k][i] - 0.5);
-    }
-    out[i] = s;
+// Смесь миров: середина остаётся серединой, а каждый включённый мир тянет от
+// неё со своей силой. amps — по числу на мир: единица, если он в земле, ноль,
+// если снят, и что-то между, пока он вливается.
+function mixH(seed, amps, x, y) {
+  var h = 50;
+  for (var i = 0; i < LAYERS.length; i++) {
+    if (!(amps[i] > 0)) continue;
+    h += amps[i] * pullOf(i, soloH(seed, i, x, y));
   }
-  return out;
+  return h;
 }
 
+// Первые n миров подряд — так земля выглядит по ходу вливания. last — насколько
+// влит последний из них. Влит один — это в точности первый мир.
+function mergeAmps(n, last) {
+  if (last === undefined) last = 1;
+  var a = [];
+  for (var i = 0; i < LAYERS.length; i++) a.push(i < n ? (i === n - 1 ? last : 1) : 0);
+  return a;
+}
+
+function mergeH(seed, n, x, y, last) { return mixH(seed, mergeAmps(n, last), x, y); }
+
+// Узлы одного мира на прямоугольнике — чтобы рисовать кадр целиком, а не
+// хешировать каждую точку заново. Числа ровно те же, что даёт soloH.
+function layerGrid(seed, k, ox, oy, w, h) {
+  var c = LAYERS[k].cell, ls = layerSeed(seed, k);
+  var gx0 = Math.floor(ox / c), gy0 = Math.floor(oy / c);
+  var nx = Math.floor((ox + w) / c) - gx0 + 2;
+  var ny = Math.floor((oy + h) / c) - gy0 + 2;
+  var v = new Float64Array(nx * ny);
+  for (var j = 0; j < ny; j++) {
+    for (var i = 0; i < nx; i++) v[j * nx + i] = rollAt(ls, (gx0 + i) * c, (gy0 + j) * c);
+  }
+  return { cell: c, gx0: gx0, gy0: gy0, nx: nx, v: v };
+}
+
+function gridAt(g, x, y) {
+  var c = g.cell;
+  var cx = Math.floor(x / c), cy = Math.floor(y / c);
+  var wx = smoothstep((x - cx * c) / c), wy = smoothstep((y - cy * c) / c);
+  var a = (cy - g.gy0) * g.nx + (cx - g.gx0);
+  var v00 = g.v[a], v10 = g.v[a + 1], v01 = g.v[a + g.nx], v11 = g.v[a + g.nx + 1];
+  var top = v00 + (v10 - v00) * wx;
+  var bot = v01 + (v11 - v01) * wx;
+  return top + (bot - top) * wy;
+}
+
+// Какая высота — такая земля.
 var BANDS = [
-  { max: 0.30, name: 'глубина', rgb: [22, 44, 74] },
-  { max: 0.44, name: 'вода', rgb: [46, 98, 143] },
-  { max: 0.50, name: 'песок', rgb: [205, 183, 122] },
-  { max: 0.88, name: 'трава', rgb: [80, 131, 74] },
-  { max: 2.00, name: 'камень', rgb: [139, 132, 120] }
+  { max: 30, name: 'глубина', rgb: [22, 44, 74] },
+  { max: 44, name: 'вода', rgb: [46, 98, 143] },
+  { max: 50, name: 'песок', rgb: [205, 183, 122] },
+  { max: 88, name: 'трава', rgb: [80, 131, 74] },
+  { max: 1e9, name: 'камень', rgb: [139, 132, 120] }
 ];
 
-function bandOf(v) {
-  for (var i = 0; i < BANDS.length; i++) if (v < BANDS[i].max) return i;
+var GRASS = 3;
+
+function bandOf(h) {
+  for (var i = 0; i < BANDS.length; i++) if (h < BANDS[i].max) return i;
   return BANDS.length - 1;
 }
 
-// Что видно на картинке при таком наборе слоёв. Подпись — ядро стенда:
-// она должна объяснять картинку без единого слова вслух.
-function captionFor(on, power) {
-  var act = activeOf(on, power);
-  var a = act[0], b = act[1], c = act[2], d = act[3];
-  if (!a && !b && !c && !d) return 'Не включено ничего — ровное поле без единой складки.';
-  if (a && !b && !c && !d) return 'Плавные материки, и больше ничего: ни холма, ни камня. Пусто.';
-  if (a && b && !c && !d) return 'Появились холмы: материки перестали быть гладкими.';
-  if (a && b && c && !d) return 'Добавились камни. Не хватает только мелкой шероховатости.';
-  if (a && b && c && d) return 'Камни и шероховатость на месте — похоже на настоящее.';
-  if (a && b && !c && d) return 'Холмы есть, камней между ними нет — сразу мелкая рябь.';
-  if (a) return 'Материки и сразу мелочь: холмов не хватает, и от берега к камням слишком резко.';
-  if (b) return 'Самый крупный выключен: материков нет, холмы идут ковром от края до края.';
-  return 'Крупного нет вовсе — осталась зернистая труха, ни верха ни низа.';
+// Подпись, которую видит игрок: тип земли и высота в метрах. Целая часть вниз,
+// потому что границы полос целые: у показанного числа полоса ровно та же,
+// что нарисована под ногами.
+function labelOf(h) {
+  return BANDS[bandOf(h)].name + ' ' + Math.floor(h) + ' м';
 }
+
+// Ходим везде: и по траве, и по камню, и по воде. Утонуть тут негде.
+
+// Где встать в самом начале.
+function findSpawn(seed) {
+  return { x: LAYERS[0].cell * 0.38, y: LAYERS[0].cell * 0.62 };
+}
+
+// Ворота из мира k в следующий: семьсот метров от места, где в этот мир вошли.
+var GATE_M = 700;
+
+function gatePoint(seed, k) {
+  var p = findSpawn(seed);
+  for (var i = 0; i <= k; i++) {
+    var a = hashU32(i, 0x2B, seed ^ 0x6E9A11) / 4294967296 * Math.PI * 2;
+    p = { x: p.x + Math.cos(a) * GATE_M, y: p.y + Math.sin(a) * GATE_M };
+  }
+  return p;
+}
+
+// Где игрок появляется в мире k: там же, где вошёл в ворота предыдущего.
+function entryPoint(seed, k) { return k === 0 ? findSpawn(seed) : gatePoint(seed, k - 1); }
+
+// Сливалка стоит в первом мире, недалеко от начала: к ней приходят из последних
+// ворот и жмут на ней кнопку, чтобы влить следующий мир.
+var SMELT_M = 260;
+
+function smeltPoint(seed) {
+  var s = findSpawn(seed);
+  return { x: s.x + SMELT_M * 0.82, y: s.y + SMELT_M * 0.57 };
+}
+
+// Пещера, из которой вываливаются в самом начале, и место, где остаётся клякса.
+// Обе — рядом со стартом: к ним возвращаются, когда идут к сливалке.
+function cavePoint(seed) {
+  var s = findSpawn(seed);
+  return { x: s.x - 96, y: s.y - 74 };
+}
+
+function spitPoint(seed) {
+  var s = findSpawn(seed);
+  return { x: s.x + 78, y: s.y - 54 };
+}
+
+// Число, которое дух крутит в самом конце: тот же хеш и тот же сид, что у мира.
+function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 // ===== CORE END =====
 
 (function () {
-  var SIZE = 256;
-  var STRIP_H = 36;
+  var SPEED = 160;        // метров в секунду
+  var REACH = 26;         // с какого расстояния берутся ворота
+  var USE_R = 52;         // с какого расстояния дотягиваешься до сливалки
+  var TILE = 16;          // клетка тумана войны, в метрах
+  var REVEAL_R = 150;     // на сколько метров вокруг проявляется мир
+  var START_R = 40;       // в начале мира видно немного
 
   var $ = function (id) { return document.getElementById(id); };
-  var seedInput = $('seedInput');
-  var stack = $('stack');
-  var verdict = $('verdict');
-  var seedLine = $('seedLine');
-  var outSub = $('outSub');
-  var legendEl = $('legend');
+  var cv = $('cv');
+  var ctx = cv.getContext('2d');
+  var quiltsEl = $('quilts');
+  var pad = $('pad');
+  var gb = $('gb'), bb = $('bb'), sb = $('sb'), pb = $('pb');
+  var ghostFig = $('ghostFig');
+  var coordEl = $('coordEl'), headEl = $('headEl');
+  var coordHot = false;
 
-  var ctxOut = $('cvOut').getContext('2d');
-  var imgOut = ctxOut.createImageData(SIZE, SIZE);
+  var MONO = 'ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace';
+  var SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
-  var seed = 0;
-  var fields = null;
-  var on = [];
-  var power = [];
-  var rows = [];
-  var pending = 0;
+  // ——— состояние ———
 
-  // ---------- разметка слоёв ----------
+  var px, py;
+  var fcx = 0, fcy = -1;
+  var keys = {};
+  var phase;              // 1 — идём по мирам, 2 — сливаем их у сливалки
+  var world;              // в каком мире стоим
+  var merged;             // сколько миров влито
+  var on = [];            // какие миры сейчас в земле: галочки, а не переключатель
+  var showK;              // чьи столбы показаны
+  var flash = 0;
+  var revealed = new Set();
+  var revealR, revealTarget;
+  var anim = null;        // вливание в ходу
+  var pulls = [];         // числа, всплывающие над столбами при вливании
+  var useBtn = null;      // кнопка на сливалке, нарисованная в мире
+  var quiltBtns = [], allBtn = null;
 
-  var html = '';
-  for (var i = 0; i < LAYERS.length; i++) {
-    var L = LAYERS[i];
-    var last = i === LAYERS.length - 1 ? ' last' : '';
-    html += '<div class="layer on' + last + '" id="ly' + i + '">' +
-      '<label class="toggle on" id="tg' + i + '">' +
-        '<input type="checkbox" id="ck' + i + '" checked>' +
-        '<span class="box" aria-hidden="true"></span>' +
-        '<span class="nm">' + L.name + ' <i>' + L.hint + '</i></span>' +
-      '</label>' +
-      '<canvas class="strip" id="st' + i + '" width="' + SIZE + '" height="' + STRIP_H +
-        '" aria-label="слой: ' + L.hint + '"></canvas>' +
-      '<div class="knob">' +
-        '<div class="head"><label for="rg' + i + '">сила слоя</label>' +
-        '<span><b id="pw' + i + '">—</b></span></div>' +
-        '<input type="range" id="rg' + i + '" min="0" max="100" step="5" value="' + L.power + '">' +
-      '</div>' +
-    '</div>';
-    on.push(true);
-    power.push(L.power);
+  // ——— разговор ———
+
+  var talk = { list: null, i: 0, lock: false };
+  var said = {};          // что уже сказано: каждая реплика по одному разу
+  var locked = true;      // ходьба открывается, когда дух договорит первый раз
+  var gbNext = null, bbNext = null, sbNext = null;  // что будет, когда щёлкнут по реплике
+
+  // ——— интро и колобок ———
+
+  var CAVE = cavePoint(WORLD_SEED);
+  var CAVE_IN = { x: CAVE.x - 34, y: CAVE.y - 26 };
+  var SPIT = spitPoint(WORLD_SEED);
+  var intro = null;       // пока идёт вываливание из пещеры
+  var inCave = true;      // пока не вышли наружу, мира не видно вовсе
+  var blob = null;        // колобок: приехал объяснять, не успел
+  var splat = false;      // клякса на его месте
+  var beam = 0;           // выстрел
+  var coordFlash = 0;     // подсветка координаты при переходе в другой мир
+
+  // ——— холсты ———
+
+  var W = 0, H = 0;
+  var terrain = document.createElement('canvas');
+  var tctx = terrain.getContext('2d');
+  var timg = null;
+  var fog = document.createElement('canvas');
+  var fctx = fog.getContext('2d');
+  var fimg = null;
+
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    W = cv.clientWidth || 600;
+    H = cv.clientHeight || Math.round(W * 0.7);
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    terrain.width = Math.ceil(W / 4) + 2;
+    terrain.height = Math.ceil(H / 4) + 2;
+    timg = tctx.createImageData(terrain.width, terrain.height);
+
+    fog.width = Math.ceil(W / TILE) + 3;
+    fog.height = Math.ceil(H / TILE) + 3;
+    fimg = fctx.createImageData(fog.width, fog.height);
+    var d = fimg.data;
+    for (var p = 0; p < d.length; p += 4) { d[p] = 5; d[p + 1] = 7; d[p + 2] = 12; }
   }
-  stack.innerHTML = html;
 
-  for (i = 0; i < LAYERS.length; i++) {
-    rows.push({
-      wrap: $('ly' + i),
-      toggle: $('tg' + i),
-      check: $('ck' + i),
-      range: $('rg' + i),
-      out: $('pw' + i),
-      ctx: $('st' + i).getContext('2d'),
-      img: $('st' + i).getContext('2d').createImageData(SIZE, STRIP_H)
+  // чей мир сейчас на экране: по нему же и столбы
+  function curK() { return phase === 1 ? world : (allIn() ? showK : merged - 1); }
+
+  // влиты ли уже все миры: только тогда галочками можно снимать и ставить
+  function allIn() { return phase === 2 && merged >= LAYERS.length; }
+
+  // сколько какого мира сейчас в земле
+  function amps() {
+    if (allIn()) {
+      var a = [];
+      for (var i = 0; i < LAYERS.length; i++) a.push(on[i] ? 1 : 0);
+      return a;
+    }
+    return mergeAmps(merged, anim ? anim.a : 1);
+  }
+
+  // высота под точкой
+  function heightAt(x, y) {
+    if (phase === 1) return soloH(WORLD_SEED, world, x, y);
+    return mixH(WORLD_SEED, amps(), x, y);
+  }
+
+  // ——— земля ———
+
+  function paintTerrain(camX, camY) {
+    var ox = Math.floor(camX / 4) * 4, oy = Math.floor(camY / 4) * 4;
+    var tw = terrain.width, th = terrain.height;
+    var solo = phase === 1 ? world : -1;
+    var a = solo >= 0 ? null : amps();
+    var grids = [], i;
+    if (solo >= 0) {
+      grids.push({ k: solo, g: layerGrid(WORLD_SEED, solo, ox, oy, (tw + 1) * 4, (th + 1) * 4) });
+    } else {
+      for (i = 0; i < LAYERS.length; i++) {
+        if (!(a[i] > 0)) continue;
+        grids.push({ k: i, g: layerGrid(WORLD_SEED, i, ox, oy, (tw + 1) * 4, (th + 1) * 4) });
+      }
+    }
+    var d = timg.data, p = 0;
+    for (var j = 0; j < th; j++) {
+      var wy = oy + j * 4 + 2;
+      for (var k = 0; k < tw; k++, p += 4) {
+        var wx = ox + k * 4 + 2;
+        var h;
+        if (solo >= 0) {
+          h = gridAt(grids[0].g, wx, wy);
+        } else {
+          h = 50;
+          for (i = 0; i < grids.length; i++) {
+            h += a[grids[i].k] * pullOf(grids[i].k, gridAt(grids[i].g, wx, wy));
+          }
+        }
+        var c = BANDS[bandOf(h)].rgb;
+        d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2];
+        d[p + 3] = 255;
+      }
+    }
+    tctx.putImageData(timg, 0, 0);
+    return { x: ox, y: oy };
+  }
+
+  // ——— туман войны: у каждого мира свой, оттого и ходишь, а не смотришь сверху ———
+
+  function fogKey(tx, ty) { return curK() + ':' + tx + ',' + ty; }
+
+  function drawFog(camX, camY) {
+    var tx0 = Math.floor(camX / TILE), ty0 = Math.floor(camY / TILE);
+    var fw = fog.width, fh = fog.height;
+    var d = fimg.data, p = 3;
+    for (var j = 0; j < fh; j++) {
+      for (var i = 0; i < fw; i++, p += 4) {
+        d[p] = revealed.has(fogKey(tx0 + i, ty0 + j)) ? 0 : 250;
+      }
+    }
+    fctx.putImageData(fimg, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(fog, tx0 * TILE - camX, ty0 * TILE - camY, fw * TILE, fh * TILE);
+
+    var SC = 44;
+    var sx0 = Math.floor(camX / SC), sx1 = Math.floor((camX + W) / SC);
+    var sy0 = Math.floor(camY / SC), sy1 = Math.floor((camY + H) / SC);
+    for (var sy = sy0; sy <= sy1; sy++) {
+      for (var sx = sx0; sx <= sx1; sx++) {
+        var h2 = hashU32(sx, sy, WORLD_SEED ^ 0x51AB29);
+        if (h2 % 4 !== 0) continue;
+        var wx = sx * SC + (h2 >>> 8) % SC;
+        var wy = sy * SC + (h2 >>> 16) % SC;
+        if (revealed.has(fogKey(Math.floor(wx / TILE), Math.floor(wy / TILE)))) continue;
+        ctx.fillStyle = 'rgba(205,238,245,' + (0.12 + ((h2 >>> 24) % 30) / 100) + ')';
+        ctx.fillRect(wx - camX, wy - camY, 1.5, 1.5);
+      }
+    }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function label(x, y, text, font, fill) {
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(5,7,12,0.8)';
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = fill;
+    ctx.fillText(text, x, y);
+  }
+
+  function dot(x, y, col, r) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
+
+  // ——— столбы: ровно та же индикация, что во втором стенде ———
+
+  // Чьи столбы сейчас на экране: пока идёшь по мирам — того, в котором стоишь,
+  // а когда влиты все — сразу всех отмеченных, каждый своим цветом. Иначе разные
+  // наборы галочек выглядели бы одинаково, хотя земля под ними разная.
+  function shownWorlds() {
+    if (phase === 1) return [world];
+    if (!allIn()) return [merged - 1];
+    var list = [];
+    for (var i = 0; i < LAYERS.length; i++) if (on[i]) list.push(i);
+    return list;
+  }
+
+  // Дальние столбы — под туманом: где не был, там их и не видно.
+  function drawFarPosts(camX, camY) {
+    var list = shownWorlds(), top = curK();
+    for (var n = 0; n < list.length; n++) {
+      var k = list[n];
+      var c = LAYERS[k].cell, col = LAYERS[k].col, ls = layerSeed(WORLD_SEED, k);
+      var gx0 = Math.floor(camX / c), gx1 = Math.ceil((camX + W) / c);
+      var gy0 = Math.floor(camY / c), gy1 = Math.ceil((camY + H) / c);
+      var near = {};
+      if (k === top) {
+        var cor = cornersAt(WORLD_SEED, k, px, py);
+        for (var i = 0; i < 4; i++) near[cor[i].x + ',' + cor[i].y] = true;
+      }
+      // числа пишутся только у того мира, который сейчас разбирают: где столбы
+      // часты или миров на экране несколько, числа сливаются в кашу
+      var nums = k === top && c >= NUM_MIN;
+
+      for (var gy = gy0; gy <= gy1; gy++) {
+        for (var gx = gx0; gx <= gx1; gx++) {
+          var wx = gx * c, wy = gy * c;
+          if (near[wx + ',' + wy]) continue;
+          var sx = wx - camX, sy = wy - camY;
+          dot(sx, sy, col, k === top ? (nums ? 3 : 2.4) : 2);
+          if (nums) {
+            label(sx, sy + 13, String(rollAt(ls, wx, wy)), '10px ' + MONO, 'rgba(221,226,234,0.62)');
+          }
+        }
+      }
+    }
+  }
+
+  // Четыре ближних — поверх тумана: они всегда нужны, даже если вокруг чернота.
+  function drawNearPosts(camX, camY) {
+    var k = curK();
+    var col = LAYERS[k].col;
+    var cor = cornersAt(WORLD_SEED, k, px, py);
+    var cx = W / 2, cy = H / 2;
+    var pc = [
+      Math.round(cor[0].w * 100),
+      Math.round(cor[1].w * 100),
+      Math.round(cor[2].w * 100)
+    ];
+    pc.push(100 - pc[0] - pc[1] - pc[2]); // последний добит остатком до сотни
+    for (var i = 0; i < 4; i++) {
+      var q = cor[i], qx = q.x - camX, qy = q.y - camY;
+      ctx.strokeStyle = 'rgba(242,245,250,' + (0.16 + 0.5 * q.w).toFixed(3) + ')';
+      ctx.lineWidth = 0.6 + 2.6 * q.w;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(qx, qy);
+      ctx.stroke();
+      label((cx + qx) / 2, (cy + qy) / 2, pc[i] + '%', '9px ' + MONO, 'rgba(207,230,255,0.75)');
+    }
+    for (i = 0; i < 4; i++) {
+      q = cor[i]; qx = q.x - camX; qy = q.y - camY;
+      dot(qx, qy, col, 4);
+      label(qx, qy + 15, labelOf(q.v), '600 10px ' + SANS, '#eef2f8');
+    }
+  }
+
+  // ——— вливание: видно, как чужие столбы тянут землю на себя ———
+
+  // Столбы вливаемого мира садятся по одному, от ближних к дальним, и каждый
+  // показывает, на сколько метров он тянет землю под собой. Сетка предыдущего
+  // мира остаётся на экране: его клетка ровно вдвое крупнее, и видно, что
+  // новые столбы садятся внутрь неё и мнут то, что она задала.
+  function drawMerge(camX, camY, t) {
+    var k = anim.k, col = LAYERS[k].col;
+
+    var pc = LAYERS[k - 1].cell, pcol = LAYERS[k - 1].col;
+    var qx0 = Math.floor(camX / pc), qx1 = Math.ceil((camX + W) / pc);
+    var qy0 = Math.floor(camY / pc), qy1 = Math.ceil((camY + H) / pc);
+    ctx.strokeStyle = 'rgba(221,226,234,0.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (var gx = qx0; gx <= qx1 + 1; gx++) {
+      ctx.moveTo(gx * pc - camX, 0); ctx.lineTo(gx * pc - camX, H);
+    }
+    for (var gy = qy0; gy <= qy1 + 1; gy++) {
+      ctx.moveTo(0, gy * pc - camY); ctx.lineTo(W, gy * pc - camY);
+    }
+    ctx.stroke();
+    for (gy = qy0; gy <= qy1 + 1; gy++) {
+      for (gx = qx0; gx <= qx1 + 1; gx++) dot(gx * pc - camX, gy * pc - camY, pcol, 5);
+    }
+
+    for (var i = 0; i < pulls.length; i++) {
+      var p = pulls[i];
+      var age = t - p.t0;
+      if (age < 0) continue;
+      var sx = p.x - camX, sy = p.y - camY;
+      if (sx < -30 || sx > W + 30 || sy < -30 || sy > H + 30) continue;
+      var rise = Math.min(1, age / 400);
+      dot(sx, sy, col, 3.5);
+      var up = p.d >= 0;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx, sy + (up ? -1 : 1) * (5 + 9 * rise));
+      ctx.stroke();
+      label(sx, sy + (up ? -1 : 1) * (13 + 9 * rise),
+        (up ? '+' : '−') + Math.abs(Math.round(p.d)), '700 11px ' + MONO, col);
+    }
+  }
+
+  function startMergeAnim(k, t) {
+    anim = { k: k, a: 0, t0: t };
+    pulls = [];
+    var c = LAYERS[k].cell, ls = layerSeed(WORLD_SEED, k);
+    var gx0 = Math.floor((px - W / 2) / c), gx1 = Math.ceil((px + W / 2) / c);
+    var gy0 = Math.floor((py - H / 2) / c), gy1 = Math.ceil((py + H / 2) / c);
+    for (var gy = gy0; gy <= gy1; gy++) {
+      for (var gx = gx0; gx <= gx1; gx++) {
+        var wx = gx * c, wy = gy * c;
+        var d = Math.hypot(wx - px, wy - py);
+        pulls.push({ x: wx, y: wy, d: pullOf(k, rollAt(ls, wx, wy)), t0: t + 250 + d * 2.4 });
+      }
+    }
+  }
+
+  // ——— сливалка ———
+
+  function drawSmelt(camX, camY, t) {
+    var s = smeltPoint(WORLD_SEED);
+    var sx = s.x - camX, sy = s.y - camY;
+    if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) { useBtn = null; return; }
+    var done = merged >= LAYERS.length;
+    var col = done ? '#8b94a3' : LAYERS[merged].col;
+    var pulse = 0.5 + 0.5 * Math.sin(t / 300);
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    roundRect(-17, -12, 34, 24, 5);
+    ctx.fillStyle = 'rgba(20,24,32,0.92)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, -2, 6, 0, Math.PI * 2);
+    ctx.fillStyle = done ? '#3a4150' : col;
+    ctx.globalAlpha = done ? 1 : 0.45 + 0.45 * pulse;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(-10, 12); ctx.lineTo(-14, 20); ctx.moveTo(10, 12); ctx.lineTo(14, 20);
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.restore();
+    label(sx, sy - 24, 'СЛИВАЛКА', '700 10px ' + SANS, done ? '#8b94a3' : col);
+
+    // кнопка прямо в мире: жать можно пальцем, мышью или пробелом
+    var near = Math.hypot(s.x - px, s.y - py) < USE_R;
+    if (done || !near || anim) { useBtn = null; return; }
+    var text = 'ВЛИТЬ МИР ' + LAYERS[merged].cell + ' м';
+    ctx.font = '700 11px ' + SANS;
+    var w = ctx.measureText(text).width + 20, h = 24;
+    // внизу окна живут подсказка и плашка с землёй под ногами: если кнопка
+    // попадает на них, вешаем её над сливалкой, а не под ней
+    var by = sy + 26;
+    if (by + h > H - 56) by = sy - 26 - h;
+    var bx = Math.max(6, Math.min(W - w - 6, sx - w / 2));
+    useBtn = { x: bx, y: by, w: w, h: h };
+    roundRect(bx, by, w, h, 7);
+    ctx.fillStyle = 'rgba(20,30,48,0.97)';
+    ctx.fill();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#eaf1ff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, bx + w / 2, by + h / 2);
+  }
+
+  // ——— ворота ———
+
+  function drawGate(sx, sy, t, k) {
+    var col = LAYERS[k].col;
+    var pulse = 0.5 + 0.5 * Math.sin(t / 300);
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 16, 20, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(5,7,12,0.55)';
+    ctx.fill();
+    ctx.lineWidth = 3.4;
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = col;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 8 + 3 * pulse, 11 + 4 * pulse, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(221,226,234,' + (0.5 - 0.3 * pulse).toFixed(2) + ')';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+    label(sx, sy - 30, 'столбы через ' + LAYERS[k].cell + ' м', '600 10px ' + SANS, col);
+  }
+
+  function drawArrow(gx, gy, col, camX, camY) {
+    var sx = gx - camX, sy = gy - camY;
+    var m = 34;
+    if (sx > m && sx < W - m && sy > m && sy < H - m) return;
+    var cx = W / 2, cy = H / 2;
+    var dx = sx - cx, dy = sy - cy;
+    var kk = Math.min((W / 2 - m) / Math.abs(dx || 1e-6), (H / 2 - m) / Math.abs(dy || 1e-6));
+    var ax = cx + dx * kk, ay = cy + dy * kk;
+    ctx.save();
+    ctx.translate(ax, ay);
+    ctx.rotate(Math.atan2(dy, dx));
+    ctx.beginPath();
+    ctx.moveTo(11, 0); ctx.lineTo(-7, 7); ctx.lineTo(-3, 0); ctx.lineTo(-7, -7);
+    ctx.closePath();
+    ctx.fillStyle = col;
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fill();
+    ctx.restore();
+    label(ax - dx * 0.09, ay - dy * 0.09 + 16,
+      Math.round(Math.hypot(gx - px, gy - py)) + ' м', '600 10px ' + SANS, col);
+  }
+
+  // ——— игрок ———
+
+  function drawPlayer() {
+    var cx = W / 2, cy = H / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(2, 3, 9, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.rotate(Math.atan2(fcy, fcx) + Math.PI / 2);
+    roundRect(-5, 3, 10, 7, 2);
+    ctx.fillStyle = '#8892a6';
+    ctx.fill();
+    ctx.fillStyle = '#c3cad8';
+    ctx.beginPath(); ctx.arc(-7.5, 1, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(7.5, 1, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#d9dee8';
+    ctx.strokeStyle = '#9aa4b8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#2c3442';
+    ctx.beginPath(); ctx.arc(0, -1, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3f6db3';
+    ctx.beginPath();
+    ctx.arc(0, -1, 5, -Math.PI * 0.85, -Math.PI * 0.15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#9fc2f0';
+    ctx.beginPath(); ctx.arc(-1.5, -3.6, 1, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // внизу окна — что насчиталось под ногами, и из каких миров это сложено
+  function drawBadge() {
+    var text = labelOf(heightAt(px, py));
+    ctx.font = '600 11px ' + SANS;
+    var w = ctx.measureText(text).width + 16;
+    var cx = W / 2, cy = H - 18;
+    roundRect(cx - w / 2, cy - 11, w, 22, 6);
+    ctx.fillStyle = 'rgba(22,39,44,0.94)';
+    ctx.fill();
+    ctx.strokeStyle = '#2f5c66';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#d8f0f6';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, cx, cy);
+
+    if (phase !== 2) return;
+    // из каких миров сложена эта земля — прямо под тем, что под ногами
+    ctx.font = '600 10px ' + SANS;
+    var a = amps();
+    var parts = [], total = 0, gap = 7, i;
+    for (i = 0; i < LAYERS.length; i++) {
+      if (!(a[i] > 0)) continue;
+      var t = String(LAYERS[i].cell);
+      parts.push({ t: t, c: LAYERS[i].col, w: ctx.measureText(t).width });
+      total += parts[parts.length - 1].w + (parts.length > 1 ? gap + 6 : 0);
+    }
+    var x = cx - total / 2;
+    ctx.textAlign = 'left';
+    for (i = 0; i < parts.length; i++) {
+      if (i) {
+        label(x - 6, cy + 20, '+', '600 10px ' + SANS, 'rgba(221,226,234,0.7)');
+        x += 6;
+      }
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(5,7,12,0.8)';
+      ctx.strokeText(parts[i].t, x, cy + 20);
+      ctx.fillStyle = parts[i].c;
+      ctx.fillText(parts[i].t, x, cy + 20);
+      x += parts[i].w + gap;
+    }
+  }
+
+  // одна строка подсказки: что делать дальше
+  function hintText() {
+    if (anim || intro || locked) return '';
+    if (phase === 1) return 'иди к воротам';
+    if (merged < LAYERS.length) return 'иди к сливалке и вливай миры';
+    return 'кнопки слева: каждый мир по одному и всё вместе';
+  }
+
+  // ——— пещера, туша тролля и лут из первого стенда ———
+
+  function drawTroll(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(0.5);
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = '#46543a';
+    ctx.beginPath(); ctx.ellipse(0, 0, 21, 13, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-6, 12); ctx.lineTo(-13, 24);
+    ctx.moveTo(8, 11); ctx.lineTo(16, 22);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(-24, -3, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // глаз выколот: с одной стороны крестик, с другой пустая глазница
+    ctx.strokeStyle = '#0b0e14';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-28, -7); ctx.lineTo(-24, -3);
+    ctx.moveTo(-24, -7); ctx.lineTo(-28, -3);
+    ctx.stroke();
+    ctx.fillStyle = '#0b0e14';
+    ctx.beginPath(); ctx.arc(-19, -6, 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawLoot(x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    // меч, воткнут криво
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-12, 8); ctx.lineTo(-19, -16); ctx.stroke();
+    ctx.strokeStyle = '#aeb7c6'; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(-12, 8); ctx.lineTo(-19, -16); ctx.stroke();
+    ctx.strokeStyle = '#7c8496'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-19, 2); ctx.lineTo(-9, 0); ctx.stroke();
+    // топор
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(14, 10); ctx.lineTo(8, -12); ctx.stroke();
+    ctx.strokeStyle = '#8a6f4e'; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(14, 10); ctx.lineTo(8, -12); ctx.stroke();
+    ctx.fillStyle = '#aeb7c6';
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)'; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(8, -12); ctx.lineTo(19, -16); ctx.lineTo(17, -5); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Скала со входом: остаётся стоять в первом мире, к ней возвращаются.
+  function drawCave(camX, camY) {
+    var x = CAVE.x - camX, y = CAVE.y - camY;
+    if (x < -100 || x > W + 100 || y < -100 || y > H + 100) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(-44, 18);
+    ctx.lineTo(-33, -20);
+    ctx.lineTo(-5, -33);
+    ctx.lineTo(25, -23);
+    ctx.lineTo(43, 5);
+    ctx.lineTo(29, 21);
+    ctx.closePath();
+    ctx.fillStyle = '#3b3f49';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-2, 3, 15, 12, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0c11';
+    ctx.fill();
+    ctx.restore();
+    label(x, y - 40, 'ПЕЩЕРА', '700 10px ' + SANS, 'rgba(150,158,172,0.9)');
+  }
+
+  // Пол пещеры с тушей и лутом — только пока не вывалились наружу.
+  function drawCaveInside(camX, camY) {
+    var x = CAVE_IN.x - camX, y = CAVE_IN.y - camY;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(x + 16, y + 12, 78, 56, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#191c22';
+    ctx.fill();
+    ctx.strokeStyle = '#23272f';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+    drawTroll(x + 40, y + 24);
+    drawLoot(x + 4, y + 46);
+  }
+
+  // ——— колобок: тот самый икс, приехал всё объяснить ———
+
+  function blobPos(t) {
+    var age = t - blob.t0;
+    var k = Math.min(1, age / 1200);
+    var e = 1 - Math.pow(1 - k, 3);
+    return {
+      x: SPIT.x,
+      y: SPIT.y - (1 - e) * 300,
+      hop: Math.abs(Math.sin(age / 150)) * (blob.dead ? 0 : 1) * (0.35 + 0.65 * (1 - e))
+    };
+  }
+
+  function drawBlob(camX, camY, t) {
+    var p = blobPos(t);
+    var x = p.x - camX, y = p.y - camY - p.hop * 14;
+    if (x < -60 || x > W + 60 || y < -60 || y > H + 60) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.sin(t / 210) * 0.13);
+    ctx.beginPath();
+    for (var i = 0; i <= 26; i++) {
+      var a = i / 26 * Math.PI * 2;
+      var r = 15 + Math.sin(a * 5 + 1.2) * 2.4 + Math.sin(a * 3) * 1.7;
+      var xx = Math.cos(a) * r, yy = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#c9b184';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(5,7,12,0.85)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(120,96,58,0.5)';
+    ctx.beginPath(); ctx.arc(-7, 6, 3.6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -7, 2.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2b241a';
+    ctx.beginPath(); ctx.arc(-5, -6, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(4, -7, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#2b241a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-6, 0); ctx.quadraticCurveTo(0, 5, 7, -1);
+    ctx.stroke();
+    ctx.restore();
+    label(x, y + 9, '8', '700 11px ' + MONO, 'rgba(43,36,26,0.95)');
+  }
+
+  // Что от него осталось: лежит там же до конца прохода.
+  function drawSplat(camX, camY) {
+    var x = SPIT.x - camX, y = SPIT.y - camY;
+    if (x < -50 || x > W + 50 || y < -50 || y > H + 50) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.beginPath();
+    for (var i = 0; i <= 30; i++) {
+      var a = i / 30 * Math.PI * 2;
+      var r = 12 + Math.sin(a * 7 + 0.6) * 4.4 + Math.sin(a * 3 + 2) * 3;
+      var xx = Math.cos(a) * r, yy = Math.sin(a) * r * 0.62;
+      if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(163,138,94,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(5,7,12,0.7)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(163,138,94,0.8)';
+    ctx.beginPath(); ctx.arc(19, 6, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-21, -3, 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // Выстрел: луч от духа, который висит в правом верхнем углу окна.
+  function drawBeam(camX, camY, t) {
+    var age = t - beam;
+    if (age > 280) { beam = 0; return; }
+    var p = blobPos(t);
+    var x = p.x - camX, y = p.y - camY;
+    var k = 1 - age / 280;
+    ctx.strokeStyle = 'rgba(255,214,120,' + (0.25 + 0.7 * k).toFixed(2) + ')';
+    ctx.lineWidth = 1 + 4 * k;
+    ctx.beginPath();
+    ctx.moveTo(W - 46, 34);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,236,190,' + (0.45 * k).toFixed(2) + ')';
+    ctx.beginPath();
+    ctx.arc(x, y, 8 + 26 * (1 - k), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ——— разговор: пузырь духа сверху, реплика игрока — кнопка снизу ———
+
+  // Все отложенные реплики держатся в одном месте: кнопка СНАЧАЛА гасит их разом,
+  // иначе дух договаривал бы прошлый проход поверх нового.
+  var timers = [];
+
+  function later(fn, ms) { timers.push(window.setTimeout(fn, ms)); }
+
+  function clearLater() {
+    for (var i = 0; i < timers.length; i++) window.clearTimeout(timers[i]);
+    timers = [];
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>]/g, function (c) {
+      return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;';
     });
   }
 
-  // ---------- рисование ----------
-
-  function paintOut() {
-    var f = combine(fields, on, power);
-    var d = imgOut.data;
-    for (var i = 0, p = 0; i < f.length; i++, p += 4) {
-      var c = BANDS[bandOf(f[i])].rgb;
-      d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2];
-      d[p + 3] = 255;
-    }
-    ctxOut.putImageData(imgOut, 0, 0);
+  function pop(el) {
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = '';
   }
 
-  function paintStrip(i) {
-    var r = rows[i];
-    var f = field(SIZE, STRIP_H, layerSeed(seed, i), LAYERS[i].cell);
-    var d = r.img.data;
-    for (var k = 0, p = 0; k < f.length; k++, p += 4) {
-      var g = (f[k] * 255) | 0;
-      if (g < 0) g = 0; else if (g > 255) g = 255;
-      d[p] = g; d[p + 1] = g; d[p + 2] = g;
-      d[p + 3] = 255;
-    }
-    r.ctx.putImageData(r.img, 0, 0);
+  // Реплики никуда не мотаются сами: пузырь висит, пока по нему не щёлкнут.
+  // Щелчок и есть «дальше» — что будет дальше, лежит в gbNext.
+
+  function speak(text, next) {
+    gb.innerHTML = esc(text) + '<span class="hint">▸</span>';
+    gb.classList.remove('hidden');
+    pop(gb);
+    gbNext = next || null;
   }
 
-  // ---------- подписи ----------
-
-  function renderRow(i) {
-    var r = rows[i];
-    r.out.textContent = power[i] + ' %';
-    r.toggle.className = on[i] ? 'toggle on' : 'toggle';
-    var live = on[i] && power[i] > 0;
-    r.wrap.className = 'layer' + (live ? ' on' : '') + (i === LAYERS.length - 1 ? ' last' : '');
-  }
-
-  function renderText() {
-    verdict.className = 'sum';
-    verdict.textContent = captionFor(on, power);
-
-    var act = activeOf(on, power);
-    var n = 0;
-    for (var i = 0; i < act.length; i++) if (act[i]) n++;
-    outSub.textContent = n === 0 ? 'слоёв не включено' :
-      n === 1 ? 'сложен один слой' :
-      'сложено слоёв: ' + n;
-
-    var nums = [];
-    for (i = 0; i < LAYERS.length; i++) nums.push(layerSeed(seed, i));
-    seedLine.innerHTML = 'Сид один на всё: <b>' + seed +
-      '</b>. Слой берёт его же, сдвинутый на свой номер, — <b>' + nums.join('</b>, <b>') +
-      '</b>. Оттого узоры разные, а мир один: вернёте сид — вернётся ровно эта картинка.';
-  }
-
-  function renderLegend() {
-    var s = '';
-    for (var i = 0; i < BANDS.length; i++) {
-      var c = BANDS[i].rgb;
-      s += '<span><i class="swatch" style="background:rgb(' + c[0] + ',' + c[1] + ',' + c[2] +
-        ')"></i>' + BANDS[i].name + '</span>';
-    }
-    legendEl.innerHTML = s;
-  }
-
-  // ---------- сборка ----------
-
-  function repaint() {
-    paintOut();
-    renderText();
-  }
-
-  function schedule() {
-    if (pending) return;
-    pending = requestAnimationFrame(function () { pending = 0; repaint(); });
-  }
-
-  function reseed(text) {
-    seedInput.value = text;
-    seed = seedFromText(text);
-    fields = buildLayers(SIZE, SIZE, seed);
-    for (var i = 0; i < LAYERS.length; i++) paintStrip(i);
-    repaint();
-  }
-
-  for (i = 0; i < LAYERS.length; i++) {
-    (function (k) {
-      rows[k].check.addEventListener('change', function () {
-        on[k] = rows[k].check.checked;
-        renderRow(k);
-        schedule();
-      });
-      rows[k].range.addEventListener('input', function () {
-        power[k] = Number(rows[k].range.value);
-        renderRow(k);
-        schedule();
-      });
-    })(i);
-  }
-
-  $('resetBtn').addEventListener('click', function () {
-    for (var k = 0; k < LAYERS.length; k++) {
-      on[k] = true;
-      power[k] = LAYERS[k].power;
-      rows[k].check.checked = true;
-      rows[k].range.value = String(LAYERS[k].power);
-      renderRow(k);
-    }
-    repaint();
+  gb.addEventListener('click', function () {
+    if (gb.classList.contains('hidden')) return;
+    gb.classList.add('hidden');
+    var n = gbNext;
+    gbNext = null;
+    if (n) n();
+    else advance();
   });
 
-  $('reseedBtn').addEventListener('click', function () {
-    reseed(String(Math.floor(Math.random() * 4294967296)));
+  function blobSay(text, next) {
+    bb.innerHTML = esc(text) + '<span class="hint">▸</span>';
+    bb.classList.remove('hidden');
+    pop(bb);
+    bbNext = next || null;
+  }
+
+  bb.addEventListener('click', function () {
+    if (bb.classList.contains('hidden')) return;
+    bb.classList.add('hidden');
+    var n = bbNext;
+    bbNext = null;
+    if (n) n();
   });
 
-  seedInput.addEventListener('change', function () {
-    var text = seedInput.value;
-    if (text.length === 0) text = '0';
-    reseed(text);
+  // Реплики самого игрока в начале, до всякого разговора. Они тоже ждут щелчка:
+  // сами не гаснут и сами ничего не двигают.
+  function say(text, next) {
+    sb.innerHTML = esc(text) + '<span class="hint">▸</span>';
+    sb.classList.remove('hidden');
+    pop(sb);
+    sbNext = next || null;
+  }
+
+  sb.addEventListener('click', function () {
+    if (sb.classList.contains('hidden')) return;
+    sb.classList.add('hidden');
+    var n = sbNext;
+    sbNext = null;
+    if (n) n();
   });
 
-  seedInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') seedInput.blur();
+  function hideSay() { sb.classList.add('hidden'); sbNext = null; }
+
+  function runBlock(list) {
+    talk.list = list;
+    talk.i = 0;
+    talk.lock = false;
+    renderButton();
+  }
+
+  function renderButton() {
+    var e = talk.list && talk.list[talk.i];
+    if (!e || talk.lock) { pb.classList.add('hidden'); return; }
+    hideSay();
+    pb.innerHTML = esc(e.p) + '<span class="hint">▸</span>';
+    pb.classList.remove('hidden');
+    pop(pb);
+  }
+
+  // Дальше по списку: следующая реплика игрока или конец разговора.
+  function advance() {
+    if (talk.list && talk.i < talk.list.length) renderButton();
+    else talk.list = null;
+  }
+
+  pb.addEventListener('click', function () {
+    var e = talk.list && talk.list[talk.i];
+    if (!e || talk.lock) return;
+    pb.classList.add('hidden');
+    talk.i++;
+    if (e.fx) e.fx();
+    if (!e.g) { advance(); return; }
+    speak(typeof e.g === 'function' ? e.g() : e.g, e.kind === 'blob' ? blobScene : null);
   });
 
-  for (i = 0; i < LAYERS.length; i++) renderRow(i);
-  renderLegend();
-  reseed(seedInput.value);
+  // Колобок приезжает, представляется и получает своё. Ждать не заставляет:
+  // и его реплика, и ответ духа висят, пока по ним не щёлкнут.
+  function blobScene() {
+    talk.lock = true;
+    blob = { t0: performance.now(), dead: false };
+    later(function () {
+      blobSay('А вот и икс прибыл! Ща я вам всё расскажу, значит, начнём с того, что мир вообще-то...',
+        shootBlob);
+    }, 1300);
+  }
+
+  function shootBlob() {
+    beam = performance.now();
+    later(function () {
+      blob.dead = true;
+      splat = true;
+      flash = 0.5;
+      speak('Это моя фиеста.', function () { talk.lock = false; advance(); });
+    }, 260);
+  }
+
+  // ——— сценарий ———
+
+  var MEET = [
+    { p: 'Ты? Ты остался в пещере. Вместе со своим глазом.',
+      g: 'Глаз остался. Я — нет. Я теперь снаружи, а снаружи большое.' },
+    { p: 'Ты вероятно опять хочешь превратить что-то что я очень люблю в числа? Только попробуй мне оцифровать пюрешку с сосиской!',
+      g: 'Пюрешка твоя в безопасности. Поговорим о мире. Земля и всё, что тебя окружает, точно так же выводится из числа. Из одного. Зовут его икс.',
+      kind: 'blob' },
+    { p: '...ты его убил.',
+      g: 'Я его глушу каждый раз. И каждый раз он ровно тот же — спроси у своего косого меча. Вот из него, из одного, собрано всё, что ты видишь до горизонта. Из восьмёрки.' },
+    { p: 'ИЗ ВОСЬМЁРКИ?',
+      g: 'Число как число. Не я выбирал.' },
+    { p: 'А можно я просто пойду продам твой лут и дальше гриндить?',
+      g: 'Можно. Но ты правда собрался скипать контент от призрака в скафандре и с антенной?' },
+    { p: '...ладно.',
+      g: 'Смотри. Конкретно то, что под тобой, посчитано из четырёх чисел. Вон они, столбы — на каждом своё написано, и к каждому от тебя тянется ниточка с процентом, сколько его в этой точке. Походи, сам увидишь.',
+      // с этого места ходить можно: дальше разговор идёт, пока ходишь
+      fx: function () {
+        locked = false;
+        pad.className = 'pad';
+      } },
+    { p: 'Так че большое-то всё?',
+      g: 'Потому что я эти четыре числа кинул раз в сто девяносто два метра, а между ними растянул. Вот тебе одна гора на весь горизонт и ни хрена больше.' },
+    { p: 'А если чаще?',
+      g: 'Будет то же место и другой мир. Ворота видишь? Это не другая карта, это тот же мир, посчитанный чаще. Смотри на числа наверху — они не поменяются.' }
+  ];
+
+  var W96 = [
+    { p: 'О, уже похоже на местность.',
+      g: 'Иди дальше. Посмотрим, где ты перестанешь так говорить.' }
+  ];
+
+  var FINE = [
+    { p: 'А где числа над столбами?',
+      g: 'Не влезли. Их тут под сотню на экран. Хочешь — считай сам, я мёртвый, я подожду.' },
+    { p: 'Меня трясёт. Это наждачка, а не земля.',
+      g: 'Наждачка. И вот что смешное: все четыре — брак. Крупный — гора без единой детали. Мелкий — детали без единой горы. Как ни считай в одну частоту, получается враньё.' },
+    { p: 'И че делать.',
+      g: 'Не выбирать. Складывать. Возвращайся к пещере, там стоит штука.' }
+  ];
+
+  var SMELT = [
+    { p: 'Что за хреновина?', g: 'Сливалка.' },
+    { p: 'Ты её сам так назвал?', g: 'Я умер, а не поглупел. Она сливает. Жми.' }
+  ];
+
+  var NONE = [
+    { p: 'Это бетонный пол.', g: 'Это ровно. Ровно — это не мир. Ставь обратно.' }
+  ];
+
+  var SAUSAGE = [
+    { p: 'А сосиска?',
+      g: 'Кручу... выпало ' + sausageRoll(WORLD_SEED) + ' — сосиска. Кривая. Не благодари.' }
+  ];
+
+  // Что дух говорит, когда ты вошёл в очередной мир.
+  var ENTER = [
+    null,
+    'Глянь наверх. Координата та же, что была у ворот. Место то же. Я его посчитал вдвое чаще.',
+    'Ещё вдвое чаще. Место всё то же, ты никуда не уходил.',
+    'Ещё вдвое. Дальше некуда.'
+  ];
+
+  // Что он говорит после каждого вливания: сила мира своими словами.
+  var POURED = [
+    null,
+    'Видел числа? Каждый столб нового счёта дёрнул землю под собой на своё. Слабее первого: у того сила сто, у этого сорок пять. Первый решает, где гора. Этот — где на горе бугор.',
+    'Восемнадцать. Почти шёпот.',
+    'Шесть. Это уже не голос, это заусенец. И заметь — я по-прежнему ничего не храню. Складываю четыре числа в точке и говорю, что под тобой.'
+  ];
+
+  // ——— интро: три дня в пещере, вываливание наружу, явление духа ———
+
+  // Начало идёт само, но на своих репликах останавливается и ждёт щелчка:
+  // время замирает, лыцарь замирает вместе с ним.
+  var INTRO = [
+    { t: 2100, fx: function () {
+        pauseIntro();
+        say('Три дня. Косой меч, косой топор и глаз. Спасибо, блять.', resumeIntro);
+      } },
+    { t: 3500, fx: function () { flash = 1; inCave = false; } },
+    { t: 3900, fx: function () { revealTarget = REVEAL_R; } },
+    { t: 6000, fx: function () {
+        pauseIntro();
+        say('а че такое все... большое то', resumeIntro);
+      } },
+    { t: 7400, fx: function () {
+        ghostFig.classList.add('show');
+        intro = null;
+        // дальше ничего само не происходит: щёлкнул по реплике — пошёл разговор
+        speak('так видимо у меня тут незаконченное дело', function () { runBlock(MEET); });
+      } }
+  ];
+
+  function pauseIntro() { if (intro && !intro.paused) intro.paused = performance.now(); }
+
+  function resumeIntro() {
+    if (!intro || !intro.paused) return;
+    intro.t0 += performance.now() - intro.paused;
+    intro.paused = 0;
+  }
+
+  function stepIntro(t) {
+    var st = intro;
+    if (st.paused) return;               // ждём, пока прочтут и щёлкнут
+    var age = t - st.t0;
+    var s = findSpawn(WORLD_SEED), p;
+    if (age < 2000) p = { x: CAVE_IN.x, y: CAVE_IN.y };
+    else if (age < 3500) p = lerpP(CAVE_IN, CAVE, (age - 2000) / 1500);
+    else if (age < 4700) p = lerpP(CAVE, s, (age - 3500) / 1200);
+    else p = s;
+    var dx = p.x - px, dy = p.y - py;
+    if (Math.hypot(dx, dy) > 0.2) { fcx = dx; fcy = dy; }
+    px = p.x; py = p.y;
+    while (st.i < INTRO.length && age >= INTRO[st.i].t) INTRO[st.i++].fx();
+  }
+
+  function lerpP(a, b, k) {
+    k = Math.max(0, Math.min(1, k));
+    return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+  }
+
+  function skipIntro() {
+    if (!intro) return;
+    intro.paused = 0;
+    hideSay();
+    intro.t0 = performance.now() - INTRO[INTRO.length - 1].t;
+    stepIntro(performance.now());
+  }
+
+  // Реплики, которые случаются сами: у пещеры, у кляксы, у сливалки.
+  function checkTalk(t) {
+    if (talk.list || anim || !gb.classList.contains('hidden')) return;
+    if (phase === 2 && merged < LAYERS.length && !said.smelt) {
+      var s = smeltPoint(WORLD_SEED);
+      if (Math.hypot(s.x - px, s.y - py) < 150) { said.smelt = true; runBlock(SMELT); }
+    }
+    if (phase === 1 && world !== 0) return;
+    if (!said.cave && Math.hypot(CAVE.x - px, CAVE.y - py) < 70) {
+      said.cave = true;
+      speak('Не лезь обратно. Там пусто и там я лежу.');
+    }
+    if (splat && !said.spit && Math.hypot(SPIT.x - px, SPIT.y - py) < 46) {
+      said.spit = true;
+      speak('Не тыкай. Он от этого не станет умнее.');
+    }
+  }
+
+  // ——— кадр ———
+
+  function step(dt, t) {
+    if (intro) stepIntro(t);
+    if (!anim && !intro && !locked) {
+      var mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      var my = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
+      if (mx || my) {
+        var n = Math.hypot(mx, my);
+        mx /= n; my /= n;
+        fcx = mx; fcy = my;
+        px += mx * SPEED * dt;
+        py += my * SPEED * dt;
+      }
+    }
+    if (flash > 0) flash = Math.max(0, flash - dt * 2);
+    if (coordFlash > 0) coordFlash = Math.max(0, coordFlash - dt * 0.6);
+
+    revealR += (revealTarget - revealR) * Math.min(1, dt * 2.5);
+    var r = revealR;
+    var tx0 = Math.floor((px - r) / TILE), tx1 = Math.floor((px + r) / TILE);
+    var ty0 = Math.floor((py - r) / TILE), ty1 = Math.floor((py + r) / TILE);
+    for (var ty = ty0; ty <= ty1; ty++) {
+      for (var tx = tx0; tx <= tx1; tx++) {
+        var cx = tx * TILE + TILE / 2, cy = ty * TILE + TILE / 2;
+        if ((cx - px) * (cx - px) + (cy - py) * (cy - py) <= r * r) revealed.add(fogKey(tx, ty));
+      }
+    }
+
+    if (anim) stepMerge(t);
+
+    if (phase === 1 && !intro) {
+      var g = gatePoint(WORLD_SEED, world);
+      if (Math.hypot(g.x - px, g.y - py) < REACH) enterGate();
+    }
+
+    if (!intro) checkTalk(t);
+  }
+
+  // вливание: столбы садятся, земля перетекает в новую форму
+  function stepMerge(t) {
+    var age = t - anim.t0;
+    anim.a = age < 400 ? 0 : Math.min(1, (age - 400) / 2200);
+    if (age < 4000) return;
+    anim = null;
+    pulls = [];
+    renderUI();
+    if (!POURED[merged - 1]) return;
+    var last = merged >= LAYERS.length && !said.quilt;
+    if (last) said.quilt = true;
+    speak(POURED[merged - 1], last ? function () {
+      speak('Слева галочки, любым набором. Сними какую-нибудь и смотри, что пропало.');
+    } : null);
+  }
+
+  function draw(t) {
+    var camX = px - W / 2, camY = py - H / 2;
+
+    ctx.imageSmoothingEnabled = true;
+    var o = paintTerrain(camX, camY);
+    ctx.drawImage(terrain, o.x - camX, o.y - camY, terrain.width * 4, terrain.height * 4);
+
+    // пока не вывалились из пещеры, мира не видно вовсе: только пол под ногами
+    var open = !inCave;
+    // пещера и клякса стоят в первом мире, к ним возвращаются за сливалкой
+    var home = phase === 2 || world === 0;
+
+    if (open && home) {
+      drawCave(camX, camY);
+      if (splat) drawSplat(camX, camY);
+    }
+    if (open && blob && !blob.dead) drawBlob(camX, camY, t);
+
+    var g, next;
+    if (open && phase === 1) {
+      g = gatePoint(WORLD_SEED, world);
+      next = world + 1 < LAYERS.length ? world + 1 : 0;
+      drawGate(g.x - camX, g.y - camY, t, next);
+    } else if (open && !anim) {
+      drawSmelt(camX, camY, t);
+    }
+
+    if (anim) drawMerge(camX, camY, t);
+    else if (open) drawFarPosts(camX, camY);
+
+    drawPlayer();
+
+    // туман — пока идёшь; при вливании и при сравнении миров он только мешает
+    if (!anim && !(phase === 2 && merged >= LAYERS.length)) drawFog(camX, camY);
+
+    // в пещере темно всё, кроме пола с тушей: он рисуется поверх тумана,
+    // а игрок — поверх пола, иначе его же и не видно
+    if (inCave) { drawCaveInside(camX, camY); drawPlayer(); }
+    if (beam) drawBeam(camX, camY, t);
+
+    // цели и четыре ближних столба — поверх тумана: маяки в черноте
+    if (open && phase === 1) {
+      drawGate(g.x - camX, g.y - camY, t, next);
+      drawArrow(g.x, g.y, LAYERS[next].col, camX, camY);
+    }
+    if (open && !anim) drawNearPosts(camX, camY);
+
+    // сливалка и её кнопка — в самом конце: иначе подписи столбов лезут на неё
+    if (open && phase === 2 && !anim) {
+      drawSmelt(camX, camY, t);
+      var s = smeltPoint(WORLD_SEED);
+      if (merged < LAYERS.length) drawArrow(s.x, s.y, LAYERS[merged].col, camX, camY);
+    }
+
+    if (open) drawBadge();
+    var k = curK();
+    var inLand = 0;
+    if (phase === 2) {
+      var a = amps();
+      for (var i = 0; i < LAYERS.length; i++) if (a[i] > 0) inLand++;
+    }
+    // чей мир на экране — в верхней планке рядом с координатой, а не на канве:
+    // наверху окна живут координата и галочки, и рисовать поверх них нельзя
+    var head = !open ? ''
+      : anim ? 'вливается мир ' + LAYERS[anim.k].cell + ' м'
+      : inLand > 1 ? 'миров в земле: ' + inLand + ', числа у ' + LAYERS[k].cell + ' м'
+      : 'столбы через ' + LAYERS[k].cell + ' м';
+    if (headEl.textContent !== head) headEl.textContent = head;
+    var hcol = open ? LAYERS[anim ? anim.k : k].col : '';
+    if (headEl.style.color !== hcol) headEl.style.color = hcol;
+
+    // координата стоит в углу окна, где раньше была кнопка. В пещере её нет
+    // вовсе, а при переходе в другой мир она вспыхивает — это и есть
+    // доказательство, что место осталось то же, а другой у него только счёт.
+    var coord = open ? 'x ' + fmtM(px) + '   y ' + fmtM(py) : 'x —   y —';
+    if (coordEl.textContent !== coord) coordEl.textContent = coord;
+    var hot = coordFlash > 0;
+    if (hot !== coordHot) {
+      coordHot = hot;
+      coordEl.className = hot ? 'coord hot' : 'coord';
+    }
+    // подсказка молчит, пока говорят: два текста разом внизу не читаются
+    var hint = talk.list ? '' : hintText();
+    if (hint) label(W / 2, H - 40, hint, '10px ' + SANS, 'rgba(221,226,234,0.7)');
+
+    if (flash > 0) {
+      ctx.fillStyle = 'rgba(233,241,255,' + (flash * 0.75).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  function fmtM(v) {
+    v = Math.round(v);
+    var s = String(Math.abs(v)), out = '';
+    while (s.length > 3) { out = ' ' + s.slice(-3) + out; s = s.slice(0, -3); }
+    return (v < 0 ? '−' : '') + s + out;
+  }
+
+  var last = performance.now();
+  function frame(t) {
+    var dt = Math.min(0.05, (t - last) / 1000);
+    last = t;
+    step(dt, t);
+    draw(t);
+    requestAnimationFrame(frame);
+  }
+
+  // ——— переходы между мирами ———
+
+  function enterGate() {
+    var g = gatePoint(WORLD_SEED, world);
+    px = g.x; py = g.y;
+    flash = 1;
+    revealR = START_R;
+    if (world + 1 < LAYERS.length) {
+      world++;
+    } else {
+      phase = 2;
+      merged = 1;
+      showK = 0;
+      var s = findSpawn(WORLD_SEED);
+      px = s.x; py = s.y;
+    }
+    // координата не поменялась — это и есть доказательство, что место то же,
+    // а другой у него только счёт. Подсвечиваем, чтобы это заметили.
+    coordFlash = 1;
+    if (phase === 1 && ENTER[world]) {
+      speak(ENTER[world],
+        world === 1 ? function () { runBlock(W96); }
+          : world === 3 ? function () { runBlock(FINE); }
+          : null);
+    }
+    renderUI();
+  }
+
+  // ——— сливалка и просмотр миров по одному ———
+
+  function pullLever() {
+    if (phase !== 2 || anim || merged >= LAYERS.length) return;
+    var s = smeltPoint(WORLD_SEED);
+    if (Math.hypot(s.x - px, s.y - py) >= USE_R) return;
+    var k = merged;
+    merged++;
+    showK = k;
+    on[k] = true;
+    startMergeAnim(k, performance.now());
+    renderUI();
+  }
+
+  // Галочки, а не переключатель: миры включаются и снимаются по отдельности,
+  // так что можно смотреть любой один, любую пару и всё разом.
+  function toggleWorld(k) {
+    if (!allIn() || anim) return;
+    on[k] = !on[k];
+    if (on[k]) showK = k;
+    else { showK = 0; for (var i = 0; i < LAYERS.length; i++) if (on[i]) { showK = i; break; } }
+    renderUI();
+
+    var any = false;
+    for (var j = 0; j < LAYERS.length; j++) if (on[j]) any = true;
+    if (!any && !said.none) {
+      said.none = true;
+      speak('А вот с этого я начинал. Ровно пятьдесят метров, во все стороны, навсегда.',
+        function () { runBlock(NONE); });
+    }
+  }
+
+  function setAll() {
+    if (!allIn() || anim) return;
+    for (var i = 0; i < LAYERS.length; i++) on[i] = true;
+    renderUI();
+    // закрывающая реплика ждёт, пока её дослушают: если игрок ушёл щёлкать
+    // галочки на полуслове, она предложится снова, а не пропадёт совсем
+    if (said.sausage) return;
+    speak('Считай. Четыре захода, в каждом под тобой четыре столба. Шестнадцать чисел на точку — ' +
+      'и все шестнадцать выведены из одной восьмёрки, которую я пристрелил у тебя на глазах.',
+      function () { said.sausage = true; runBlock(SAUSAGE); });
+  }
+
+  function renderUI() {
+    quiltsEl.className = allIn() ? 'row' : 'row hidden';
+    // когда слева появились галочки, пузырь духа съезжает ниже, чтобы не накрыть их
+    gb.className = gb.className.replace(' lower', '') + (allIn() ? ' lower' : '');
+    for (var i = 0; i < quiltBtns.length; i++) {
+      quiltBtns[i].className = 'quilt' + (on[i] ? ' on' : '') + (showK === i ? ' shown' : '');
+    }
+    if (allBtn) allBtn.className = on.every(function (v) { return v; }) ? 'on' : '';
+  }
+
+  function buildButtons() {
+    for (var i = 0; i < LAYERS.length; i++) {
+      (function (k) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'quilt';
+        b.style.setProperty('--c', LAYERS[k].col);
+        b.innerHTML = '<span class="box"></span>' + LAYERS[k].cell + ' м';
+        b.addEventListener('click', function () { toggleWorld(k); });
+        quiltsEl.appendChild(b);
+        quiltBtns.push(b);
+      })(i);
+    }
+    allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.id = 'allBtn';
+    allBtn.textContent = 'ВСЁ ВМЕСТЕ';
+    allBtn.addEventListener('click', setAll);
+    quiltsEl.appendChild(allBtn);
+  }
+
+  // ——— ввод ———
+
+  var KEYMAP = {
+    KeyW: 'up', ArrowUp: 'up',
+    KeyS: 'down', ArrowDown: 'down',
+    KeyA: 'left', ArrowLeft: 'left',
+    KeyD: 'right', ArrowRight: 'right'
+  };
+
+  window.addEventListener('keydown', function (e) {
+    if (intro) { skipIntro(); return; }   // начало можно промотать
+    if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') {
+      if (useBtn) { e.preventDefault(); pullLever(); }
+      return;
+    }
+    var k = KEYMAP[e.code];
+    if (!k) return;
+    e.preventDefault();
+    keys[k] = true;
+  });
+
+  window.addEventListener('keyup', function (e) {
+    var k = KEYMAP[e.code];
+    if (k) keys[k] = false;
+  });
+
+  // кнопка сливалки нарисована в мире — жмём по ней прямо на канве
+  cv.addEventListener('pointerdown', function (e) {
+    if (intro) { skipIntro(); return; }
+    if (!useBtn) return;
+    var r = cv.getBoundingClientRect();
+    var x = (e.clientX - r.left) * (W / r.width), y = (e.clientY - r.top) * (H / r.height);
+    if (x >= useBtn.x && x <= useBtn.x + useBtn.w && y >= useBtn.y && y <= useBtn.y + useBtn.h) {
+      e.preventDefault();
+      pullLever();
+    }
+  });
+
+  Array.prototype.forEach.call(pad.querySelectorAll('button'), function (b) {
+    var k = b.getAttribute('data-k');
+    function down(e) { e.preventDefault(); keys[k] = true; }
+    function up() { keys[k] = false; }
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointerleave', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  });
+
+  // ——— старт и рестарт ———
+
+  function reset() {
+    phase = 1;
+    world = 0;
+    merged = 1;
+    showK = 0;
+    on = [true, false, false, false];
+    anim = null;
+    pulls = [];
+    useBtn = null;
+    px = CAVE_IN.x; py = CAVE_IN.y;
+    fcx = 1; fcy = 0.7;
+    keys = {};
+    flash = 0;
+    revealed.clear();
+    // в пещере не видно ничего: туман раскроется, когда вывалимся наружу
+    revealR = 0;
+    revealTarget = 0;
+
+    clearLater();
+    talk.list = null;
+    talk.i = 0;
+    talk.lock = false;
+    said = {};
+    locked = true;
+    intro = { t0: performance.now(), i: 0, paused: 0 };
+    inCave = true;
+    blob = null;
+    splat = false;
+    beam = 0;
+    coordFlash = 0;
+    gbNext = bbNext = sbNext = null;
+    gb.classList.add('hidden');
+    bb.classList.add('hidden');
+    sb.classList.add('hidden');
+    pb.classList.add('hidden');
+    ghostFig.classList.remove('show');
+    pad.className = 'pad off';
+    renderUI();
+  }
+
+  $('resetBtn').addEventListener('click', reset);
+  window.addEventListener('resize', resize);
+
+  buildButtons();
+  resize();
+  reset();
+  requestAnimationFrame(frame);
 })();
 </script>
-</div>
 </body>
 </html>
