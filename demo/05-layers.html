@@ -347,7 +347,7 @@
 <div class="game" id="game">
 
   <div class="stage" id="stage">
-    <canvas id="cv" aria-label="Мир сверху: персонаж, столбы с числами, ворота в мир с частыми столбами и сливалка"></canvas>
+    <canvas id="cv" aria-label="Мир сверху: персонаж, столбы с числами, порталы в соседние миры и сливалка"></canvas>
 
     <div class="ui" id="ui">
       <div class="row">
@@ -567,11 +567,11 @@ function gatePoint(seed, k) {
   return p;
 }
 
-// Где игрок появляется в мире k: там же, где вошёл в ворота предыдущего.
+// Где игрок появляется в мире k: там же, где вошёл в портал предыдущего.
 function entryPoint(seed, k) { return k === 0 ? findSpawn(seed) : gatePoint(seed, k - 1); }
 
 // Сливалка стоит в первом мире, недалеко от начала: к ней приходят из последних
-// ворот и жмут на ней кнопку, чтобы влить следующий мир.
+// порталов и жмут на ней кнопку, чтобы влить следующий мир.
 var SMELT_M = 260;
 
 function smeltPoint(seed) {
@@ -597,7 +597,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 
 (function () {
   var SPEED = 160;        // метров в секунду
-  var REACH = 26;         // с какого расстояния берутся ворота
+  var REACH = 26;         // с какого расстояния срабатывает портал
   var USE_R = 52;         // с какого расстояния дотягиваешься до сливалки
   var TILE = 16;          // клетка тумана войны, в метрах
   var REVEAL_R = 150;     // на сколько метров вокруг проявляется мир
@@ -631,7 +631,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   var revealR, revealTarget;
   var anim = null;        // вливание в ходу
   var pulls = [];         // числа, всплывающие над столбами при вливании
-  var useBtn = null;      // кнопка на сливалке, нарисованная в мире
+  var useBtns = [];       // кнопки на сливалке, нарисованные прямо в мире
+  var portalLock = null;  // место, от которого надо отойти, чтобы портал сработал
   var quiltBtns = [], allBtn = null;
 
   // ——— разговор ———
@@ -928,8 +929,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     }
   }
 
-  function startMergeAnim(k, t) {
-    anim = { k: k, a: 0, t0: t };
+  function startMergeAnim(k, t, back) {
+    anim = { k: k, a: back ? 1 : 0, t0: t, back: !!back };
     pulls = [];
     var c = LAYERS[k].cell, ls = layerSeed(WORLD_SEED, k);
     var gx0 = Math.floor((px - W / 2) / c), gx1 = Math.ceil((px + W / 2) / c);
@@ -948,7 +949,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   function drawSmelt(camX, camY, t) {
     var s = smeltPoint(WORLD_SEED);
     var sx = s.x - camX, sy = s.y - camY;
-    if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) { useBtn = null; return; }
+    if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) { useBtns = []; return; }
     var done = merged >= LAYERS.length;
     var col = done ? '#8b94a3' : LAYERS[merged].col;
     var pulse = 0.5 + 0.5 * Math.sin(t / 300);
@@ -981,34 +982,77 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     ctx.restore();
     label(sx, sy - 24, 'СЛИВАЛКА', '700 10px ' + SANS, done ? '#8b94a3' : col);
 
-    // кнопка прямо в мире: жать можно пальцем, мышью или пробелом
+    // кнопки прямо в мире: жать можно пальцем, мышью или пробелом. Их две —
+    // влить следующий мир и отлить обратно последний, чтобы можно было
+    // посмотреть, как он садится, ещё раз.
     var near = Math.hypot(s.x - px, s.y - py) < USE_R;
-    if (done || !near || anim) { useBtn = null; return; }
-    var text = 'ВЛИТЬ МИР ' + LAYERS[merged].cell + ' м';
+    useBtns = [];
+    if (!near || anim) return;
+
+    var list = [];
+    if (!done) {
+      list.push({ act: 'in', text: 'ВЛИТЬ МИР ' + LAYERS[merged].cell + ' м', col: col });
+    }
+    if (merged > 1) {
+      list.push({ act: 'out', text: 'ОТЛИТЬ ОБРАТНО ' + LAYERS[merged - 1].cell + ' м',
+        col: LAYERS[merged - 1].col });
+    }
+    if (!list.length) return;
+
     ctx.font = '700 11px ' + SANS;
-    var w = ctx.measureText(text).width + 20, h = 24;
-    // внизу окна живут подсказка и плашка с землёй под ногами: если кнопка
-    // попадает на них, вешаем её над сливалкой, а не под ней
+    var h = 24, gap = 5;
+    var tall = list.length * h + (list.length - 1) * gap;
+    // внизу окна живут подсказка и плашка с землёй под ногами: если кнопки
+    // попадают на них, вешаем их над сливалкой, а не под ней
     var by = sy + 26;
-    if (by + h > H - 56) by = sy - 26 - h;
-    var bx = Math.max(6, Math.min(W - w - 6, sx - w / 2));
-    useBtn = { x: bx, y: by, w: w, h: h };
-    roundRect(bx, by, w, h, 7);
-    ctx.fillStyle = 'rgba(20,30,48,0.97)';
-    ctx.fill();
-    ctx.strokeStyle = col;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.fillStyle = '#eaf1ff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, bx + w / 2, by + h / 2);
+    if (by + tall > H - 56) by = sy - 26 - tall;
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      var w = ctx.measureText(e.text).width + 20;
+      var bx = Math.max(6, Math.min(W - w - 6, sx - w / 2));
+      var y = by + i * (h + gap);
+      useBtns.push({ x: bx, y: y, w: w, h: h, act: e.act });
+      roundRect(bx, y, w, h, 7);
+      ctx.fillStyle = 'rgba(20,30,48,0.97)';
+      ctx.fill();
+      ctx.strokeStyle = e.col;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#eaf1ff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(e.text, bx + w / 2, y + h / 2);
+    }
   }
 
-  // ——— ворота ———
+  // ——— порталы ———
 
-  function drawGate(sx, sy, t, k) {
-    var col = LAYERS[k].col;
+  // На каждом месте их два: нижний уводит туда, где столбы вдвое чаще, верхний
+  // возвращает туда, где вдвое реже. Ходить туда-сюда можно сколько угодно —
+  // место при этом не меняется, меняется только счёт.
+  var DOWN_M = 34, UP_M = -34;   // насколько диски разнесены от середины места
+
+  function portalLabel(k) { return 'столбы через ' + LAYERS[k].cell + ' м'; }
+
+  // Пара порталов на месте i — с точки зрения того мира, в котором стоим.
+  function portalsAt(i) {
+    var s = gatePoint(WORLD_SEED, i), list = [];
+    var deeper = world + 1 < LAYERS.length ? world + 1 : -1;
+    list.push({
+      x: s.x, y: s.y + DOWN_M, to: deeper, down: true,
+      text: deeper < 0 ? 'к сливалке' : portalLabel(deeper),
+      col: deeper < 0 ? '#8b94a3' : LAYERS[deeper].col
+    });
+    if (world > 0) {
+      list.push({
+        x: s.x, y: s.y + UP_M, to: world - 1, down: false,
+        text: portalLabel(world - 1), col: LAYERS[world - 1].col
+      });
+    }
+    return list;
+  }
+
+  function drawPortal(sx, sy, t, p) {
     var pulse = 0.5 + 0.5 * Math.sin(t / 300);
     ctx.save();
     ctx.translate(sx, sy);
@@ -1020,7 +1064,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     ctx.strokeStyle = 'rgba(5,7,12,0.85)';
     ctx.stroke();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = col;
+    ctx.strokeStyle = p.col;
     ctx.stroke();
     ctx.beginPath();
     ctx.ellipse(0, 0, 8 + 3 * pulse, 11 + 4 * pulse, 0, 0, Math.PI * 2);
@@ -1028,7 +1072,19 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.restore();
-    label(sx, sy - 30, 'столбы через ' + LAYERS[k].cell + ' м', '600 10px ' + SANS, col);
+    label(sx, sy + (p.down ? 30 : -30), (p.down ? '▼ ' : '▲ ') + p.text,
+      '600 10px ' + SANS, p.col);
+  }
+
+  function drawPortals(camX, camY, t) {
+    for (var i = 0; i < LAYERS.length; i++) {
+      var list = portalsAt(i);
+      for (var j = 0; j < list.length; j++) {
+        var p = list[j], sx = p.x - camX, sy = p.y - camY;
+        if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
+        drawPortal(sx, sy, t, p);
+      }
+    }
   }
 
   function drawArrow(gx, gy, col, camX, camY) {
@@ -1136,7 +1192,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   // одна строка подсказки: что делать дальше
   function hintText() {
     if (anim || intro || locked) return '';
-    if (phase === 1) return 'иди к воротам';
+    if (phase === 1) return 'иди к порталу';
     if (merged < LAYERS.length) return 'иди к сливалке и вливай миры';
     return 'кнопки слева: каждый мир по одному и всё вместе';
   }
@@ -1492,7 +1548,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   // Что дух говорит, когда ты вошёл в очередной мир.
   var ENTER = [
     null,
-    'Глянь наверх. Координата та же, что была у ворот. Место то же. Я его посчитал вдвое чаще.',
+    'Глянь наверх. Координата та же, что была у портала. Место то же. Я его посчитал вдвое чаще.',
     'Ещё вдвое чаще. Место всё то же, ты никуда не уходил.',
     'Ещё вдвое. Дальше некуда.'
   ];
@@ -1613,21 +1669,28 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 
     if (anim) stepMerge(t);
 
-    if (phase === 1 && !intro) {
-      var g = gatePoint(WORLD_SEED, world);
-      if (Math.hypot(g.x - px, g.y - py) < REACH) enterGate();
-    }
+    if (phase === 1 && !intro) checkPortals();
 
     if (!intro) checkTalk(t);
   }
 
-  // вливание: столбы садятся, земля перетекает в новую форму
+  // вливание: столбы садятся, земля перетекает в новую форму.
+  // Отливание — то же самое задом наперёд: земля возвращается к прежней.
   function stepMerge(t) {
     var age = t - anim.t0;
-    anim.a = age < 400 ? 0 : Math.min(1, (age - 400) / 2200);
+    var a = age < 400 ? 0 : Math.min(1, (age - 400) / 2200);
+    anim.a = anim.back ? 1 - a : a;
     if (age < 4000) return;
+    var back = anim.back;
     anim = null;
     pulls = [];
+    if (back) {                    // мир вылит обратно: он больше не в земле
+      merged--;
+      on[merged] = false;
+      showK = merged - 1;
+      renderUI();
+      return;
+    }
     renderUI();
     if (!POURED[merged - 1]) return;
     speak(POURED[merged - 1]);
@@ -1657,14 +1720,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     }
     if (open && blob && !blob.dead) drawBlob(camX, camY, t);
 
-    var g, next;
-    if (open && phase === 1) {
-      g = gatePoint(WORLD_SEED, world);
-      next = world + 1 < LAYERS.length ? world + 1 : 0;
-      drawGate(g.x - camX, g.y - camY, t, next);
-    } else if (open && !anim) {
-      drawSmelt(camX, camY, t);
-    }
+    if (open && phase === 1) drawPortals(camX, camY, t);
+    else if (open && !anim) drawSmelt(camX, camY, t);
 
     if (anim) drawMerge(camX, camY, t);
     else if (open) drawFarPosts(camX, camY);
@@ -1681,8 +1738,10 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 
     // цели и четыре ближних столба — поверх тумана: маяки в черноте
     if (open && phase === 1) {
-      drawGate(g.x - camX, g.y - camY, t, next);
-      drawArrow(g.x, g.y, LAYERS[next].col, camX, camY);
+      drawPortals(camX, camY, t);
+      // стрелка ведёт к тому порталу, который уводит глубже по пути
+      var go = portalsAt(world)[0];
+      drawArrow(go.x, go.y, go.col, camX, camY);
     }
     if (open && !anim) drawNearPosts(camX, camY);
 
@@ -1703,7 +1762,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     // чей мир на экране — в верхней планке рядом с координатой, а не на канве:
     // наверху окна живут координата и галочки, и рисовать поверх них нельзя
     var head = !open ? ''
-      : anim ? 'вливается мир ' + LAYERS[anim.k].cell + ' м'
+      : anim ? (anim.back ? 'отливается мир ' : 'вливается мир ') + LAYERS[anim.k].cell + ' м'
       : inLand > 1 ? 'миров в земле: ' + inLand + ', числа у ' + LAYERS[k].cell + ' м'
       : 'столбы через ' + LAYERS[k].cell + ' м';
     if (headEl.textContent !== head) headEl.textContent = head;
@@ -1748,43 +1807,79 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 
   // ——— переходы между мирами ———
 
-  function enterGate() {
-    var g = gatePoint(WORLD_SEED, world);
-    px = g.x; py = g.y;
+  // Выходишь ровно там, где вошёл, — то есть стоя на диске портала. Пока с него
+  // не сойдёшь, он не сработает снова, иначе бы швыряло туда-сюда без остановки.
+  // Отойти надо всего на шаг: вернуться и войти опять можно когда угодно.
+  function checkPortals() {
+    if (portalLock) {
+      if (Math.hypot(portalLock.x - px, portalLock.y - py) > REACH + 6) portalLock = null;
+      else return;
+    }
+    for (var i = 0; i < LAYERS.length; i++) {
+      var list = portalsAt(i);
+      for (var j = 0; j < list.length; j++) {
+        var p = list[j];
+        if (Math.hypot(p.x - px, p.y - py) < REACH) { travel(p); return; }
+      }
+    }
+  }
+
+  function travel(p) {
     flash = 1;
     revealR = START_R;
-    if (world + 1 < LAYERS.length) {
-      world++;
-    } else {
+    // координата не меняется — это и есть доказательство, что место то же,
+    // а другой у него только счёт. Подсвечиваем, чтобы это заметили.
+    coordFlash = 1;
+
+    if (p.to < 0) {                       // из последнего мира — к сливалке
       phase = 2;
       merged = 1;
       showK = 0;
       var s = findSpawn(WORLD_SEED);
       px = s.x; py = s.y;
+      portalLock = null;
+      renderUI();
+      return;
     }
-    // координата не поменялась — это и есть доказательство, что место то же,
-    // а другой у него только счёт. Подсвечиваем, чтобы это заметили.
-    coordFlash = 1;
-    if (phase === 1 && ENTER[world]) {
-      speak(ENTER[world]);
-      // ответ игрока на встречу в новом мире — своей репликой, по щелчку
-      if (world === 1) later(function () { if (!talk.list) runBlock(W96); }, 4200);
-      if (world === 3) later(function () { if (!talk.list) runBlock(FINE); }, 4200);
+
+    world = p.to;
+    portalLock = { x: p.x, y: p.y };
+    // разговор заводится один раз на мир: ходить туда-сюда можно сколько
+    // угодно, и дух не будет твердить одно и то же
+    if (!said['seen' + world]) {
+      said['seen' + world] = true;
+      if (ENTER[world]) speak(ENTER[world]);
+      // ответ игрока на встречу в новом мире — своей репликой, по щелчку.
+      // Незакрытый разговор прошлого мира просто сменится этим.
+      if (world === 1) later(function () { runBlock(W96); }, 4200);
+      if (world === 3) later(function () { runBlock(FINE); }, 4200);
     }
     renderUI();
   }
 
   // ——— сливалка и просмотр миров по одному ———
 
-  function pullLever() {
-    if (phase !== 2 || anim || merged >= LAYERS.length) return;
+  function pullLever(act) {
+    if (phase !== 2 || anim) return;
     var s = smeltPoint(WORLD_SEED);
     if (Math.hypot(s.x - px, s.y - py) >= USE_R) return;
+
+    // отлить обратно последний влитый: чтобы посмотреть, как он садится, ещё раз
+    if (act === 'out') {
+      if (merged <= 1) return;
+      var b = merged - 1;
+      showK = b;
+      startMergeAnim(b, performance.now(), true);
+      renderUI();
+      return;
+    }
+
+    if (merged >= LAYERS.length) return;
     var k = merged;
     merged++;
     showK = k;
     on[k] = true;
-    startMergeAnim(k, performance.now());
+    startMergeAnim(k, performance.now(), false);
     renderUI();
   }
 
@@ -1862,7 +1957,9 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   window.addEventListener('keydown', function (e) {
     if (intro) { skipIntro(); return; }   // начало можно промотать
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyE') {
-      if (useBtn) { e.preventDefault(); pullLever(); }
+      // с клавиатуры жмётся первая кнопка сливалки: влить, а если вливать
+      // больше нечего — отлить обратно
+      if (useBtns.length) { e.preventDefault(); pullLever(useBtns[0].act); }
       return;
     }
     var k = KEYMAP[e.code];
@@ -1879,12 +1976,16 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   // кнопка сливалки нарисована в мире — жмём по ней прямо на канве
   cv.addEventListener('pointerdown', function (e) {
     if (intro) { skipIntro(); return; }
-    if (!useBtn) return;
+    if (!useBtns.length) return;
     var r = cv.getBoundingClientRect();
     var x = (e.clientX - r.left) * (W / r.width), y = (e.clientY - r.top) * (H / r.height);
-    if (x >= useBtn.x && x <= useBtn.x + useBtn.w && y >= useBtn.y && y <= useBtn.y + useBtn.h) {
-      e.preventDefault();
-      pullLever();
+    for (var i = 0; i < useBtns.length; i++) {
+      var b = useBtns[i];
+      if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+        e.preventDefault();
+        pullLever(b.act);
+        return;
+      }
     }
   });
 
@@ -1909,7 +2010,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     on = [true, false, false, false];
     anim = null;
     pulls = [];
-    useBtn = null;
+    useBtns = [];
     px = CAVE_IN.x; py = CAVE_IN.y;
     fcx = 1; fcy = 0.7;
     keys = {};
