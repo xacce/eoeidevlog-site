@@ -247,12 +247,7 @@
     background: #16272c;
     border: 1px solid #2f5c66;
     color: #d8f0f6;
-    cursor: pointer;
   }
-
-  .bubble.ghost:hover { border-color: #7dd3e8; }
-  .bubble.ghost:active { transform: scale(0.99); }
-  .bubble.ghost .hint { color: #7dd3e8; font-size: 0.85em; margin-left: 0.35rem; }
 
   /* когда слева появился второй ряд с галочками, пузырь съезжает ещё ниже */
   .bubble.ghost.lower { top: 4.7rem; }
@@ -274,11 +269,7 @@
     background: #2b261c;
     border: 1px solid #6d5f3c;
     color: #ecdfbe;
-    cursor: pointer;
   }
-
-  .bubble.blob:hover { border-color: #c9b184; }
-  .bubble.blob .hint { color: #c9b184; font-size: 0.85em; margin-left: 0.35rem; }
 
   /* игрок отвечает снизу; его пузырь — и есть кнопка */
   .bubble.player {
@@ -636,7 +627,9 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   var talk = { list: null, i: 0, lock: false };
   var said = {};          // что уже сказано: каждая реплика по одному разу
   var locked = true;      // ходьба открывается, когда дух договорит первый раз
-  var gbNext = null, bbNext = null, sbNext = null;  // что будет, когда щёлкнут по реплике
+  var REPLY_DELAY = 280;
+  var gbHide = 0, bbHide = 0;   // чужие реплики уходят сами
+  var sbNext = null;            // а по своей щёлкают, и вот что будет дальше
 
   // ——— интро и колобок ———
 
@@ -1347,42 +1340,30 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     el.style.animation = '';
   }
 
-  // Реплики никуда не мотаются сами: пузырь висит, пока по нему не щёлкнут.
-  // Щелчок и есть «дальше» — что будет дальше, лежит в gbNext.
+  // Чужие реплики — духа и колобка — живут сами: показались, повисели столько,
+  // сколько их читают, и ушли. Щёлкают только по своим.
 
-  function speak(text, next) {
-    gb.innerHTML = esc(text) + '<span class="hint">▸</span>';
+  function speak(text) {
+    gb.textContent = text;
     gb.classList.remove('hidden');
     pop(gb);
-    gbNext = next || null;
+    gbHide = performance.now() + 3200 + text.length * 55;
   }
 
-  gb.addEventListener('click', function () {
-    if (gb.classList.contains('hidden')) return;
-    gb.classList.add('hidden');
-    var n = gbNext;
-    gbNext = null;
-    if (n) n();
-    else advance();
-  });
-
-  function blobSay(text, next) {
-    bb.innerHTML = esc(text) + '<span class="hint">▸</span>';
+  function blobSay(text) {
+    bb.textContent = text;
     bb.classList.remove('hidden');
     pop(bb);
-    bbNext = next || null;
+    bbHide = performance.now() + 3000 + text.length * 70;
   }
 
-  bb.addEventListener('click', function () {
-    if (bb.classList.contains('hidden')) return;
-    bb.classList.add('hidden');
-    var n = bbNext;
-    bbNext = null;
-    if (n) n();
-  });
+  function hideBubbles(t) {
+    if (gbHide && t > gbHide) { gb.classList.add('hidden'); gbHide = 0; }
+    if (bbHide && t > bbHide) { bb.classList.add('hidden'); bbHide = 0; }
+  }
 
-  // Реплики самого игрока в начале, до всякого разговора. Они тоже ждут щелчка:
-  // сами не гаснут и сами ничего не двигают.
+  // А вот реплики самого игрока ждут щелчка: сами не гаснут и сами ничего
+  // не двигают — ни в начале, ни потом.
   function say(text, next) {
     sb.innerHTML = esc(text) + '<span class="hint">▸</span>';
     sb.classList.remove('hidden');
@@ -1416,41 +1397,36 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     pop(pb);
   }
 
-  // Дальше по списку: следующая реплика игрока или конец разговора.
-  function advance() {
-    if (talk.list && talk.i < talk.list.length) renderButton();
-    else talk.list = null;
-  }
-
   pb.addEventListener('click', function () {
     var e = talk.list && talk.list[talk.i];
     if (!e || talk.lock) return;
     pb.classList.add('hidden');
     talk.i++;
     if (e.fx) e.fx();
-    if (!e.g) { advance(); return; }
-    speak(typeof e.g === 'function' ? e.g() : e.g, e.kind === 'blob' ? blobScene : null);
+    if (e.g) speak(typeof e.g === 'function' ? e.g() : e.g);
+    if (e.kind === 'blob') return;          // сцена с колобком вернёт кнопку сама
+    if (talk.i >= talk.list.length) { talk.list = null; return; }
+    later(renderButton, e.wait || REPLY_DELAY);
   });
 
-  // Колобок приезжает, представляется и получает своё. Ждать не заставляет:
-  // и его реплика, и ответ духа висят, пока по ним не щёлкнут.
-  function blobScene() {
+  // Колобок приезжает, представляется и получает своё.
+  function killBlob() {
     talk.lock = true;
     blob = { t0: performance.now(), dead: false };
     later(function () {
-      blobSay('А вот и икс прибыл! Ща я вам всё расскажу, значит, начнём с того, что мир вообще-то...',
-        shootBlob);
-    }, 1300);
-  }
-
-  function shootBlob() {
-    beam = performance.now();
+      blobSay('А вот и икс прибыл! Ща я вам всё расскажу, значит, начнём с того, что мир вообще-то...');
+    }, 1400);
+    // колобку дают договорить: его реплику успевают прочитать до выстрела
+    later(function () { beam = performance.now(); }, 7400);
     later(function () {
       blob.dead = true;
       splat = true;
+      bb.classList.add('hidden');
+      bbHide = 0;
       flash = 0.5;
-      speak('Это моя фиеста.', function () { talk.lock = false; advance(); });
-    }, 260);
+    }, 7700);
+    later(function () { speak('Это моя фиеста.'); }, 8300);
+    later(function () { talk.lock = false; renderButton(); }, 9500);
   }
 
   // ——— сценарий ———
@@ -1460,7 +1436,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
       g: 'Глаз остался. Я — нет. Я теперь снаружи, а снаружи большое.' },
     { p: 'Ты вероятно опять хочешь превратить что-то что я очень люблю в числа? Только попробуй мне оцифровать пюрешку с сосиской!',
       g: 'Пюрешка твоя в безопасности. Поговорим о мире. Земля и всё, что тебя окружает, точно так же выводится из числа. Из одного. Зовут его икс.',
-      kind: 'blob' },
+      kind: 'blob',
+      fx: killBlob },
     { p: '...ты его убил.',
       g: 'Я его глушу каждый раз. И каждый раз он ровно тот же — спроси у своего косого меча. Вот из него, из одного, собрано всё, что ты видишь до горизонта. Из восьмёрки.' },
     { p: 'ИЗ ВОСЬМЁРКИ?',
@@ -1542,8 +1519,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     { t: 7400, fx: function () {
         ghostFig.classList.add('show');
         intro = null;
-        // дальше ничего само не происходит: щёлкнул по реплике — пошёл разговор
-        speak('так видимо у меня тут незаконченное дело', function () { runBlock(MEET); });
+        speak('так видимо у меня тут незаконченное дело');
+        later(function () { runBlock(MEET); }, 1500);
       } }
   ];
 
@@ -1604,6 +1581,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   // ——— кадр ———
 
   function step(dt, t) {
+    hideBubbles(t);
     if (intro) stepIntro(t);
     if (!anim && !intro && !locked) {
       var mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
@@ -1649,11 +1627,13 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     pulls = [];
     renderUI();
     if (!POURED[merged - 1]) return;
-    var last = merged >= LAYERS.length && !said.quilt;
-    if (last) said.quilt = true;
-    speak(POURED[merged - 1], last ? function () {
-      speak('Слева галочки, любым набором. Сними какую-нибудь и смотри, что пропало.');
-    } : null);
+    speak(POURED[merged - 1]);
+    if (merged >= LAYERS.length && !said.quilt) {
+      said.quilt = true;
+      later(function () {
+        speak('Слева галочки, любым набором. Сними какую-нибудь и смотри, что пропало.');
+      }, 8000);
+    }
   }
 
   function draw(t) {
@@ -1783,10 +1763,10 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     // а другой у него только счёт. Подсвечиваем, чтобы это заметили.
     coordFlash = 1;
     if (phase === 1 && ENTER[world]) {
-      speak(ENTER[world],
-        world === 1 ? function () { runBlock(W96); }
-          : world === 3 ? function () { runBlock(FINE); }
-          : null);
+      speak(ENTER[world]);
+      // ответ игрока на встречу в новом мире — своей репликой, по щелчку
+      if (world === 1) later(function () { if (!talk.list) runBlock(W96); }, 4200);
+      if (world === 3) later(function () { if (!talk.list) runBlock(FINE); }, 4200);
     }
     renderUI();
   }
@@ -1818,8 +1798,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     for (var j = 0; j < LAYERS.length; j++) if (on[j]) any = true;
     if (!any && !said.none) {
       said.none = true;
-      speak('А вот с этого я начинал. Ровно пятьдесят метров, во все стороны, навсегда.',
-        function () { runBlock(NONE); });
+      speak('А вот с этого я начинал. Ровно пятьдесят метров, во все стороны, навсегда.');
+      later(function () { if (!talk.list) runBlock(NONE); }, 3200);
     }
   }
 
@@ -1830,9 +1810,10 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     // закрывающая реплика ждёт, пока её дослушают: если игрок ушёл щёлкать
     // галочки на полуслове, она предложится снова, а не пропадёт совсем
     if (said.sausage) return;
+    said.sausage = true;
     speak('Считай. Четыре захода, в каждом под тобой четыре столба. Шестнадцать чисел на точку — ' +
-      'и все шестнадцать выведены из одной восьмёрки, которую я пристрелил у тебя на глазах.',
-      function () { said.sausage = true; runBlock(SAUSAGE); });
+      'и все шестнадцать выведены из одной восьмёрки, которую я пристрелил у тебя на глазах.');
+    later(function () { if (!talk.list) runBlock(SAUSAGE); }, 6000);
   }
 
   function renderUI() {
@@ -1947,7 +1928,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     splat = false;
     beam = 0;
     coordFlash = 0;
-    gbNext = bbNext = sbNext = null;
+    gbHide = bbHide = 0;
+    sbNext = null;
     gb.classList.add('hidden');
     bb.classList.add('hidden');
     sb.classList.add('hidden');
