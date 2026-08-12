@@ -34,8 +34,10 @@
 
   /* ——— окно игры: всё происходит внутри, снаружи нет ни кнопки ——— */
 
+  /* окно у этого стенда шире колонки: в нём живут и разговор, и планка с
+     координатой, и четыре ближних столба редчайшего мира — на 600 тесно */
   .game {
-    max-width: 600px;
+    max-width: 780px;
     width: 100%;
     margin: 0 auto;
     background: #05070c;
@@ -238,19 +240,32 @@
     to { transform: translateY(0) scale(1); opacity: 1; }
   }
 
-  /* дух говорит сверху, хвост вправо — к нему. Ниже верхней планки: там
-     координата и галочки, накрывать их пузырём нельзя.
-     По реплике щёлкают — она и есть «дальше», сама ничего не мотается */
-  .bubble.ghost {
+  /* Чужие реплики живут столбиком под верхней планкой: там координата и
+     галочки, накрывать их нельзя, а друг друга реплики не накладывают —
+     колобок встаёт под духом, а не поверх него. */
+  .says {
+    position: absolute;
     top: 2.6rem;
     right: 5.6rem;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+    max-width: 58%;
+    pointer-events: none;
+  }
+
+  /* когда слева появился второй ряд с галочками, столбик съезжает ниже */
+  .says.lower { top: 4.7rem; }
+
+  .bubble.ghost, .bubble.blob { position: static; max-width: none; }
+
+  .bubble.ghost {
     background: #16272c;
     border: 1px solid #2f5c66;
     color: #d8f0f6;
   }
-
-  /* когда слева появился второй ряд с галочками, пузырь съезжает ещё ниже */
-  .bubble.ghost.lower { top: 4.7rem; }
 
   .bubble.ghost::after {
     content: "";
@@ -262,10 +277,7 @@
     border-right: none;
   }
 
-  /* колобок говорит слева, ниже кнопки СНАЧАЛА, чтобы её не накрыть */
   .bubble.blob {
-    left: 0.6rem;
-    top: 2.5rem;
     background: #2b261c;
     border: 1px solid #6d5f3c;
     color: #ecdfbe;
@@ -324,11 +336,9 @@
     .ui button { font-size: 0.68rem; padding: 0.18rem 0.42rem; }
     .coord { font-size: 0.68rem; padding: 0.18rem 0.42rem; }
     .bubble { font-size: 0.86rem; }
-    /* длинной реплике духа в узком пузыре не хватит сцены — раскатываем на всю ширину */
-    .bubble.ghost { max-width: none; left: 0.5rem; right: 0.5rem; top: 2.5rem; }
-    .bubble.ghost.lower { top: 4.6rem; }
+    /* длинной реплике в узком окне не хватит сцены — раскатываем на всю ширину */
+    .says { left: 0.5rem; right: 0.5rem; max-width: none; align-items: stretch; }
     .bubble.ghost::after { display: none; }
-    .bubble.blob { max-width: none; right: 0.5rem; top: 2.4rem; }
     .ghostfig { width: 4.4rem; }
   }
 </style>
@@ -373,9 +383,11 @@
       </g>
     </svg>
 
-    <!-- разговор: пузырь духа, пузырь-кнопка игрока и то, что игрок говорит сам -->
-    <div class="bubble ghost hidden" id="gb"></div>
-    <div class="bubble blob hidden" id="bb"></div>
+    <!-- разговор: чужие реплики столбиком, чтобы не накладывались друг на друга -->
+    <div class="says" id="says">
+      <div class="bubble ghost hidden" id="gb"></div>
+      <div class="bubble blob hidden" id="bb"></div>
+    </div>
     <div class="bubble player said hidden" id="sb"></div>
     <button type="button" class="bubble player hidden" id="pb"></button>
 
@@ -598,7 +610,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   var pad = $('pad');
   var gb = $('gb'), bb = $('bb'), sb = $('sb'), pb = $('pb');
   var ghostFig = $('ghostFig');
-  var coordEl = $('coordEl'), headEl = $('headEl');
+  var coordEl = $('coordEl'), headEl = $('headEl'), saysEl = $('says');
   var coordHot = false;
 
   var MONO = 'ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace';
@@ -628,7 +640,6 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   var said = {};          // что уже сказано: каждая реплика по одному разу
   var locked = true;      // ходьба открывается, когда дух договорит первый раз
   var REPLY_DELAY = 280;
-  var gbHide = 0, bbHide = 0;   // чужие реплики уходят сами
   var sbNext = null;            // а по своей щёлкают, и вот что будет дальше
 
   // ——— интро и колобок ———
@@ -1340,26 +1351,20 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     el.style.animation = '';
   }
 
-  // Чужие реплики — духа и колобка — живут сами: показались, повисели столько,
-  // сколько их читают, и ушли. Щёлкают только по своим.
+  // Чужая реплика висит, пока её не сменит следующая: по таймеру не гаснет
+  // ничего, читать можно сколько угодно. Двигает разговор только игрок — своей
+  // репликой, поэтому щёлкать по чужим не надо и нельзя.
 
   function speak(text) {
     gb.textContent = text;
     gb.classList.remove('hidden');
     pop(gb);
-    gbHide = performance.now() + 3200 + text.length * 55;
   }
 
   function blobSay(text) {
     bb.textContent = text;
     bb.classList.remove('hidden');
     pop(bb);
-    bbHide = performance.now() + 3000 + text.length * 70;
-  }
-
-  function hideBubbles(t) {
-    if (gbHide && t > gbHide) { gb.classList.add('hidden'); gbHide = 0; }
-    if (bbHide && t > bbHide) { bb.classList.add('hidden'); bbHide = 0; }
   }
 
   // А вот реплики самого игрока ждут щелчка: сами не гаснут и сами ничего
@@ -1422,7 +1427,6 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
       blob.dead = true;
       splat = true;
       bb.classList.add('hidden');
-      bbHide = 0;
       flash = 0.5;
     }, 7700);
     later(function () { speak('Это моя фиеста.'); }, 8300);
@@ -1562,7 +1566,7 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 
   // Реплики, которые случаются сами: у пещеры, у кляксы, у сливалки.
   function checkTalk(t) {
-    if (talk.list || anim || !gb.classList.contains('hidden')) return;
+    if (talk.list || anim) return;
     if (phase === 2 && merged < LAYERS.length && !said.smelt) {
       var s = smeltPoint(WORLD_SEED);
       if (Math.hypot(s.x - px, s.y - py) < 150) { said.smelt = true; runBlock(SMELT); }
@@ -1581,7 +1585,6 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
   // ——— кадр ———
 
   function step(dt, t) {
-    hideBubbles(t);
     if (intro) stepIntro(t);
     if (!anim && !intro && !locked) {
       var mx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
@@ -1818,8 +1821,8 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
 
   function renderUI() {
     quiltsEl.className = allIn() ? 'row' : 'row hidden';
-    // когда слева появились галочки, пузырь духа съезжает ниже, чтобы не накрыть их
-    gb.className = gb.className.replace(' lower', '') + (allIn() ? ' lower' : '');
+    // когда слева появились галочки, столбик реплик съезжает ниже, чтобы их не накрыть
+    saysEl.className = allIn() ? 'says lower' : 'says';
     for (var i = 0; i < quiltBtns.length; i++) {
       quiltBtns[i].className = 'quilt' + (on[i] ? ' on' : '') + (showK === i ? ' shown' : '');
     }
@@ -1928,7 +1931,6 @@ function sausageRoll(seed) { return hashU32(7, 7, seed) % 100000; }
     splat = false;
     beam = 0;
     coordFlash = 0;
-    gbHide = bbHide = 0;
     sbNext = null;
     gb.classList.add('hidden');
     bb.classList.add('hidden');
